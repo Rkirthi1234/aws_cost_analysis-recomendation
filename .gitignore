@@ -91,3 +91,6 @@ shared/client.yaml
 config.local.yaml
 *.local.yaml
 IMPROVEMENT_PLAN.md
+
+# Staged for deletion (cleanup)
+_removed/

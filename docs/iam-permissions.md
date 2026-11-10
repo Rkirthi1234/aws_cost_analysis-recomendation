@@ -32,7 +32,7 @@ This document covers the four IAM roles required for the Cost Analyzer Agent. Ea
 
 ## 1. Client Policy (Deploy + Invoke)
 
-Attach to the IAM user or role used for deploying and invoking the agent (CLI, web UI, CI/CD).
+Attach to the IAM user or role used for deploying and invoking the agent (the `agentcore` CLI or CI/CD).
 
 ```json
 {

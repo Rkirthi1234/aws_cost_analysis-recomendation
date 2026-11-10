@@ -15,17 +15,11 @@ boto3
 # Configuration
 pyyaml
 
-# CLI rendering
-rich
-
 # Model Context Protocol
 mcp
 
 # Python package manager (for MCP servers)
 uv
-
-#frontend
-streamlit
 
 # Testing
 hypothesis

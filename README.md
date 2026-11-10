@@ -13,7 +13,7 @@ Analyze, optimize, and report on AWS cloud costs using natural language - connec
 
 AWS Cost Analyzer Agent is an open-source AI agent for AWS cloud cost management. It helps FinOps teams, cloud engineers, and finance stakeholders analyze, understand, and optimize AWS spending across multiple accounts using natural language — no console navigation or SQL query knowledge required.
 
-The agent unifies **43 AWS billing APIs** (Cost Explorer, Budgets, Savings Plans, Compute Optimizer, Pricing etc), **CUR 2.0 resource-level analysis** via Amazon Athena, and **VPC Flow Log network traffic insights** into a single conversational interface accessible via CLI or Streamlit web UI.
+The agent unifies **43 AWS billing APIs** (Cost Explorer, Budgets, Savings Plans, Compute Optimizer, Pricing etc), **CUR 2.0 resource-level analysis** via Amazon Athena, and **VPC Flow Log network traffic insights** into a single conversational interface.
 
 ## The Problem It Solves
 
@@ -49,7 +49,7 @@ AWS Cost Analyzer Agent solves both challenges — it unifies billing APIs, CUR 
 | ⚡ **Prompt Caching** | Up to 90% cost reduction and 85% faster responses with Amazon Bedrock prompt caching |
 | 🛡️ **Security Built-In** | SQL injection prevention, prompt injection protection, config integrity validation, credential masking |
 | 🤖 **Agentic AI** | Built with Strands Agents SDK on Amazon Bedrock AgentCore with Claude Sonnet 4.5 |
-| 📋 **Prompt Library** | Pre-built query templates for common FinOps scenarios — cost overviews, service deep dives, optimization, data transfer, VPC analysis, and more |
+| 📋 **Prompt Library** | A reference collection of pre-written FinOps queries in `shared/prompts.yaml` (cost overviews, service deep dives, optimization, data transfer, VPC analysis, and more). It is not currently loaded by the agent; copy a prompt from the file and send it as your query. |
 
 ## How It Works
 
@@ -126,17 +126,9 @@ aws sts get-caller-identity
 ### 4. Use
 
 ```bash
-# Interactive CLI
-./cli/cli.sh
-
-# Single query
-./cli/cli.sh -q "What are my top 5 services by cost last month?"
-
-# Localhost Web UI (optional)
-cd frontend && streamlit run app.py
+# Invoke the deployed agent
+agentcore invoke '{"prompt": "What are my top 5 services by cost last month?"}'
 ```
-
-> ⚠️ **Security Note:** The Local host Streamlit web UI has no built-in authentication. Run it locally and do not expose it to the internet. For network access, restrict through security groups. For production deployments with authentication, see [sample-amazon-bedrock-agentcore-fullstack-webapp](https://github.com/aws-samples/sample-amazon-bedrock-agentcore-fullstack-webapp).
 
 ## Example Queries
 
@@ -174,10 +166,7 @@ Which instances generate the most cross-AZ traffic?
 │   ├── prompts/            # System prompt
 │   ├── services/           # Config, Athena, MCP, session management
 │   └── tools/              # Billing, Athena, date, analysis tools
-├── cli/                    # CLI interface (daily use)
-├── frontend/               # Optional Streamlit web UI
-├── shared/                 # Shared client config and prompt library
-├── tests/                  # Property-based tests (hypothesis)
+├── shared/                 # Client config template and reference prompt library (prompts.yaml is not loaded by the agent)
 └── deploy.sh               # One-command deployment
 ```
 
@@ -188,7 +177,6 @@ Which instances generate the most cross-AZ traffic?
 | [Configuration Guide](docs/configuration.md) | Account setup, Athena config, cross-account access, prompt caching |
 | [IAM Permissions](docs/iam-permissions.md) | Required IAM policies for deployment, invocation, and runtime |
 | [Tools Reference](docs/tools.md) | 43 billing APIs + 8 specialized tools (Athena, date, analysis, MCP) |
-| [CLI Guide](cli/README.md) | CLI usage, prompt library, debug mode |
 
 ## Supported and Not Supported
 
@@ -209,7 +197,7 @@ Which instances generate the most cross-AZ traffic?
 | Athena query failures | Verify `athena.cur`/`athena.vpc_flowlogs` config, check Athena workgroup output location |
 | Cost Explorer errors | Ensure IAM role has `ce:*` permissions |
 
-Run in debug mode: `./cli/cli.sh -v -q "test"` or `agentcore logs` for CloudWatch logs.
+Run in debug mode: `agentcore logs` for CloudWatch logs.
 
 ## Cost
 
@@ -245,12 +233,9 @@ A more complex query like *"Show me the top 10 most expensive EC2 instances last
 
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for reporting security issues.
+See the AWS security issue reporting guidance for the upstream project.
 
 ## License
 
 MIT-0. See [LICENSE](LICENSE).
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).

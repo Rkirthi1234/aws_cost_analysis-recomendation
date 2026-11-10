@@ -158,15 +158,17 @@ The AWS Knowledge MCP server provides documentation search for cost optimization
 
 ### 6. Tools Configuration (`tools`)
 
-| Tool | Description |
-|------|-------------|
-| `date` | Current date context for accurate time-based queries |
-| `athena` | CUR and VPC Flow Log queries via Amazon Athena |
-| `analysis` | Follow-up suggestions and optimization tips |
-| `billing` | 43 AWS billing APIs (Cost Explorer, Compute Optimizer, etc.) |
-| `mcp` | AWS Knowledge documentation search |
+> **Note:** The `tools.enabled` list is currently informational only. It is not read by the agent: `ConfigService` has no accessor for it, and `agent/agentcore_agent.py` registers every tool group regardless of its contents. Adding or removing entries has no effect. The table below shows what actually controls each tool group.
 
-All tools are enabled by default. Remove a tool from the list to disable it.
+| Tool group | Description | What actually controls availability |
+|------------|-------------|-------------------------------------|
+| `date` | Current date context for accurate time-based queries | Always registered |
+| `athena` | CUR and VPC Flow Log queries via Amazon Athena | CUR tools are registered only when an account has `athena.cur` configured; VPC Flow Log tools only when at least one account has `athena.vpc_flowlogs` configured |
+| `analysis` | Follow-up suggestions and optimization tips | Always registered |
+| `billing` | 43 AWS billing APIs (Cost Explorer, Compute Optimizer, etc.) | Always registered; requires a payer account in `accounts` |
+| `mcp` | AWS Knowledge documentation search | Controlled by `mcp.enabled` and `mcp.servers.<name>.enabled` (see section 5) |
+
+To change which tools are available, adjust the `accounts` and `mcp` settings above. Disabling an individual tool group such as `billing` or `analysis` would require a code change.
 
 ---
 
