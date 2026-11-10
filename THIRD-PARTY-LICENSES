@@ -1,0 +1,227 @@
+Cost Analyzer Agent - Third-Party Software Licenses
+========================================================
+
+This document contains the licenses and notices for third-party software 
+included in or used by the Cost Analyzer Agent.
+
+================================================================================
+
+1. bedrock-agentcore (v1.3.0)
+   License: Apache-2.0
+   Copyright: Amazon.com, Inc. or its affiliates
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+================================================================================
+
+2. strands-agents (v1.26.0)
+   License: Apache-2.0
+   Copyright: Amazon.com, Inc. or its affiliates
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+================================================================================
+
+3. strands-agents-tools (v0.2.20)
+   License: Apache-2.0
+   Copyright: Amazon.com, Inc. or its affiliates
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+================================================================================
+
+4. boto3 (v1.42.49)
+   License: Apache-2.0
+   Copyright: Amazon.com, Inc. or its affiliates
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+================================================================================
+
+5. PyYAML (v6.0.3)
+   License: MIT
+   Copyright: (c) 2017-2021 Ingy döt Net
+   Copyright: (c) 2006-2016 Kirill Simonov
+   
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+   
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+================================================================================
+
+6. mcp (Model Context Protocol) (v1.26.0)
+   License: MIT
+   Copyright: Anthropic, PBC
+   
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+   
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+================================================================================
+
+7. uv (v0.10.2)
+   License: Apache-2.0 OR MIT
+   Copyright: Astral Software Inc.
+   
+   Licensed under either of:
+   
+   * Apache License, Version 2.0
+     (http://www.apache.org/licenses/LICENSE-2.0)
+   * MIT license
+     (http://opensource.org/licenses/MIT)
+   
+   at your option.
+
+================================================================================
+
+8. streamlit (v1.54.0) - Frontend Only
+   License: Apache-2.0
+   Copyright: Snowflake Inc.
+   
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+   
+   Note: Streamlit is only used in the optional web frontend interface.
+   The core agent does not depend on Streamlit.
+
+================================================================================
+
+ADDITIONAL DEPENDENCIES
+
+The above packages may have their own dependencies. For a complete list of
+all transitive dependencies and their licenses, please refer to:
+
+- requirements.txt (agent runtime dependencies)
+
+You can generate a complete dependency tree using:
+  pip install pip-licenses
+  pip-licenses --format=markdown
+
+================================================================================
+
+MCP SERVERS (Runtime Dependencies)
+
+This agent uses the following MCP servers at runtime:
+
+1. awslabs.billing-cost-management-mcp-server
+   License: Apache-2.0 (assumed, AWS Labs project)
+   Copyright: Amazon.com, Inc. or its affiliates
+   Repository: https://github.com/awslabs/billing-cost-management-mcp-server
+
+2. AWS Knowledge MCP Server (HTTP Service)
+   Endpoint: https://knowledge-mcp.global.api.aws
+   License: AWS Service Terms apply
+   Provider: Amazon Web Services
+
+Note: MCP servers are invoked at runtime and are not bundled with this code.
+
+================================================================================
+
+AWS SERVICES
+
+This sample code interacts with the following AWS services, which are subject
+to AWS Service Terms (https://aws.amazon.com/service-terms/):
+
+- Amazon Bedrock
+- Amazon Bedrock AgentCore
+- Amazon Athena
+- AWS Cost Explorer
+- Amazon S3
+- AWS Glue Data Catalog
+- Amazon CloudWatch
+
+================================================================================
+
+COMPLIANCE NOTES
+
+All third-party licenses listed above are compatible with the MIT-0 license
+under which this sample code is distributed. The primary licenses used are:
+
+- Apache-2.0: Permissive license compatible with MIT-0
+- MIT: Permissive license compatible with MIT-0
+
+No copyleft licenses (GPL, LGPL, etc.) are used in this project.
+
+================================================================================
+
+For questions about these licenses or to report license compliance issues,
+please open an issue in the project repository.
+
+Last Updated: February 19, 2026

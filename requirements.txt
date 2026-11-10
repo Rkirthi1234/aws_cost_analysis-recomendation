@@ -1,0 +1,32 @@
+# Agent Runtime Requirements (for AgentCore deployment)
+# These dependencies are deployed with the agent to AWS
+
+# Core AgentCore SDK
+bedrock-agentcore
+bedrock-agentcore-starter-toolkit
+
+# Strands Agents Framework
+strands-agents
+strands-agents-tools
+
+# AWS SDK
+boto3
+
+# Configuration
+pyyaml
+
+# CLI rendering
+rich
+
+# Model Context Protocol
+mcp
+
+# Python package manager (for MCP servers)
+uv
+
+#frontend
+streamlit
+
+# Testing
+hypothesis
+pytest

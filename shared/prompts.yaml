@@ -1,0 +1,884 @@
+# Cost Analyzer Agent - Prompt Library
+# Version: 2.0
+#
+# This file contains pre-built prompts for common cost analysis scenarios.
+# You can customize these prompts or add your own!
+#
+# Format:
+#   categories:
+#     category_key:
+#       name: "Display Name"
+#       icon: "emoji"
+#       prompts:
+#         - title: "Prompt Title"
+#           description: "Short explanation of what this prompt does"
+#           complexity: basic|intermediate|advanced
+#           prompt: "The actual prompt text"
+#           tags: [tag1, tag2]
+#           requires: [optional prerequisites]
+#           related: [titles of follow-up prompts]
+#
+# Tips:
+#   - Use | for multi-line prompts
+#   - Add # comments to document your custom prompts
+#   - Keep prompts goal-oriented — state what you want to learn, not how to structure the answer
+#   - The agent knows how to route queries to the right tools (Cost Explorer vs CUR Athena)
+
+categories:
+  cost_overview:
+    name: "Cost Overview & Trends"
+    icon: "💰"
+    prompts:
+      - title: "Monthly Cost Summary"
+        description: "High-level view of last month's spending with service breakdown"
+        complexity: basic
+        prompt: |
+          Show me my total AWS costs for last month with a breakdown by top 5 services.
+          For any service with a significant month-over-month increase, highlight the change
+          and suggest what might have caused it.
+        tags: [overview, monthly, services]
+        related: ["Cost Trends (3 months)", "Cost Change Drivers"]
+
+      - title: "Cost Trends (3 months)"
+        description: "Monthly spending trends to identify patterns"
+        complexity: basic
+        prompt: |
+          Show me my monthly cost trends for the last 3 months with a breakdown by service.
+          Identify which services are growing fastest and flag any that increased more than 20%
+          month-over-month.
+        tags: [trends, monthly, growth]
+        related: ["Cost Change Drivers", "Monthly Cost Summary"]
+
+      - title: "Cost Change Drivers"
+        description: "Understand what caused cost changes between periods"
+        complexity: intermediate
+        prompt: |
+          What drove the cost changes between last month and the month before?
+          Show me the top 5 drivers of increase and top 5 drivers of decrease.
+          For each driver, explain whether it's a usage change, pricing change, or new resource.
+        tags: [drivers, comparison, root-cause]
+        related: ["Month-over-Month Comparison", "Service Deep Dive"]
+
+      - title: "Month-over-Month Comparison"
+        description: "Detailed period comparison with change analysis"
+        complexity: basic
+        prompt: |
+          Compare my total costs between last month and the month before.
+          Show me the overall change, breakdown by service, and highlight the top 5
+          services with the largest absolute dollar increase.
+        tags: [comparison, monthly, changes]
+        related: ["Cost Change Drivers", "Cost Trends (3 months)"]
+
+      - title: "Week-over-Week Comparison"
+        description: "Short-term cost changes for recent activity"
+        complexity: basic
+        prompt: |
+          Compare my costs between last week and the week before.
+          Show the total change and identify which services or usage types drove the difference.
+        tags: [comparison, weekly, recent]
+        related: ["Daily Spend Analysis", "Cost Anomalies"]
+
+      - title: "Daily Spend Analysis"
+        description: "Daily granularity to spot spikes and anomalies"
+        complexity: basic
+        prompt: |
+          Show me my daily spending for the last 2 weeks. Identify any days with notable
+          spikes (more than 30% above the average) and suggest what service or event
+          might have caused each spike.
+        tags: [daily, spikes, anomalies]
+        related: ["Cost Anomalies", "Week-over-Week Comparison"]
+
+
+  service_deep_dive:
+    name: "Service Deep Dive"
+    icon: "🔍"
+    prompts:
+      - title: "EC2 Cost Analysis"
+        description: "Total EC2 spend plus resource-level breakdown of most expensive instances"
+        complexity: intermediate
+        prompt: |
+          Analyze my EC2 costs for last month. Use Cost Explorer for the service-level total
+          and breakdown by region, then use CUR data to identify the top 10 most expensive
+          EC2 instances by resource ID. For each instance, show the cost and region.
+        tags: [ec2, instances, resource-level]
+        related: ["EC2 Rightsizing Opportunities", "Expensive EC2 Instances"]
+
+      - title: "S3 Storage Analysis"
+        description: "S3 costs broken down by storage, transfer, and bucket-level details"
+        complexity: intermediate
+        prompt: |
+          Analyze my S3 costs for last month. Show me total storage costs vs data transfer
+          costs using Cost Explorer, then use CUR data to identify my top 10 most expensive
+          S3 buckets. Include both storage and request costs per bucket.
+        tags: [s3, storage, buckets, resource-level]
+        related: ["Expensive S3 Buckets", "S3 Data Transfer"]
+
+      - title: "RDS Database Costs"
+        description: "RDS spending by engine type with instance-level identification"
+        complexity: intermediate
+        prompt: |
+          Show me my RDS costs for last month. Break it down by database engine type using
+          Cost Explorer, then use CUR data to identify the top 10 most expensive RDS instances.
+          Include instance class and engine for each.
+        tags: [rds, database, instances, resource-level]
+        related: ["RDS Rightsizing", "Reserved Instance Performance"]
+
+      - title: "Lambda Function Costs"
+        description: "Lambda spending with function-level cost attribution"
+        complexity: intermediate
+        prompt: |
+          Analyze my Lambda costs for last month. Show me the total using Cost Explorer,
+          then use CUR data to identify the top 10 most expensive Lambda functions.
+          For each function, show invocation costs vs duration costs if available.
+        tags: [lambda, serverless, functions, resource-level]
+        related: ["Lambda Optimization"]
+
+      - title: "ElastiCache Costs"
+        description: "ElastiCache spending by cluster with engine breakdown"
+        complexity: intermediate
+        prompt: |
+          Show me my ElastiCache costs for last month. Use Cost Explorer for the total and
+          breakdown by engine type (Redis vs Memcached), then use CUR data to identify
+          the most expensive clusters by resource ID.
+        tags: [elasticache, redis, memcached, resource-level]
+        related: ["Expensive ElastiCache Clusters"]
+
+      - title: "ECS/EKS Container Costs"
+        description: "Container service costs at the cluster and service level"
+        complexity: intermediate
+        prompt: |
+          Analyze my ECS and EKS costs for last month. Show me the total by service using
+          Cost Explorer, then use CUR data to break down costs by cluster. Note: EKS
+          pod-level cost attribution requires split-cost allocation to be enabled — show
+          what's available and flag if pod-level data is missing.
+        tags: [ecs, eks, containers, kubernetes]
+        related: ["ECS Rightsizing"]
+
+      - title: "EBS Volume Costs"
+        description: "EBS storage spending with volume-level details and type breakdown"
+        complexity: intermediate
+        prompt: |
+          Analyze my EBS costs for last month. Show me the total and breakdown by volume
+          type (gp2, gp3, io1, io2, st1, sc1) using Cost Explorer, then use CUR data to
+          identify the top 15 most expensive EBS volumes. Flag any gp2 volumes that could
+          be migrated to gp3 for savings.
+        tags: [ebs, storage, volumes, resource-level]
+        related: ["EBS Volume Recommendations", "EC2 Cost Analysis"]
+
+
+  optimization:
+    name: "Cost Optimization"
+    icon: "✨"
+    prompts:
+      - title: "Comprehensive Optimization Report"
+        description: "Full optimization sweep using all available recommendation tools"
+        complexity: advanced
+        prompt: |
+          Give me a comprehensive cost optimization report:
+          1. Check Cost Optimization Hub for actionable recommendations with estimated savings
+          2. Check Compute Optimizer for rightsizing opportunities across EC2, EBS, Lambda, and ECS
+          3. Identify idle resources that could be terminated or downsized
+          4. Summarize total potential monthly savings across all recommendations
+          Group findings by estimated savings (highest first) so I can prioritize.
+        tags: [optimization, recommendations, savings, comprehensive]
+        related: ["EC2 Rightsizing Opportunities", "Idle Resources", "EBS Volume Recommendations"]
+
+      - title: "EC2 Rightsizing Opportunities"
+        description: "Compute Optimizer recommendations for over-provisioned instances"
+        complexity: intermediate
+        prompt: |
+          Check if Compute Optimizer is enrolled for my account. If enrolled, show me
+          EC2 rightsizing recommendations — which instances are over-provisioned and what
+          instance types are recommended instead? Calculate the estimated monthly savings
+          if all recommendations were applied. If not enrolled, show me my most expensive
+          EC2 instances so I can evaluate them manually.
+        tags: [ec2, rightsizing, compute-optimizer]
+        requires: [Compute Optimizer enrollment recommended]
+        related: ["Comprehensive Optimization Report", "EC2 Cost Analysis"]
+
+      - title: "EBS Volume Recommendations"
+        description: "Compute Optimizer recommendations for EBS volumes"
+        complexity: intermediate
+        prompt: |
+          Check Compute Optimizer for EBS volume recommendations. Identify volumes that
+          are over-provisioned in size or IOPS, and volumes using older types (gp2) that
+          could benefit from gp3 migration. Estimate monthly savings for each recommendation.
+        tags: [ebs, rightsizing, compute-optimizer, storage]
+        requires: [Compute Optimizer enrollment recommended]
+        related: ["EBS Volume Costs", "Comprehensive Optimization Report"]
+
+      - title: "Lambda Optimization"
+        description: "Lambda function rightsizing based on Compute Optimizer"
+        complexity: intermediate
+        prompt: |
+          Check Compute Optimizer for Lambda function recommendations. Identify functions
+          with over-provisioned memory or suboptimal configurations. Show the recommended
+          memory settings and estimated cost savings for each function.
+        tags: [lambda, rightsizing, compute-optimizer, serverless]
+        requires: [Compute Optimizer enrollment recommended]
+        related: ["Lambda Function Costs", "Comprehensive Optimization Report"]
+
+      - title: "ECS Rightsizing"
+        description: "ECS service optimization recommendations"
+        complexity: intermediate
+        prompt: |
+          Check Compute Optimizer for ECS service recommendations. Identify services with
+          over-provisioned CPU or memory, and show the recommended task size. Estimate
+          monthly savings if recommendations are applied.
+        tags: [ecs, rightsizing, compute-optimizer, containers]
+        requires: [Compute Optimizer enrollment recommended]
+        related: ["ECS/EKS Container Costs", "Comprehensive Optimization Report"]
+
+      - title: "RDS Rightsizing"
+        description: "RDS instance optimization recommendations"
+        complexity: intermediate
+        prompt: |
+          Check Compute Optimizer for RDS instance recommendations. Identify databases
+          that are over-provisioned and show recommended instance classes. Estimate
+          monthly savings and flag any risks (e.g., reducing below current peak usage).
+        tags: [rds, rightsizing, compute-optimizer, database]
+        requires: [Compute Optimizer enrollment recommended]
+        related: ["RDS Database Costs", "Comprehensive Optimization Report"]
+
+      - title: "Idle Resources"
+        description: "Find resources generating costs but doing no useful work"
+        complexity: intermediate
+        prompt: |
+          Use Compute Optimizer to identify idle resources across all services. Show me
+          resources that are running but have minimal or zero utilization. For each idle
+          resource, show the monthly cost and how long it's been idle. Calculate total
+          monthly waste from idle resources.
+        tags: [idle, waste, unused, cleanup]
+        related: ["Comprehensive Optimization Report", "Untagged Resources"]
+
+      - title: "Savings Plans Analysis"
+        description: "Coverage, utilization, and purchase recommendations for Savings Plans"
+        complexity: intermediate
+        prompt: |
+          Analyze my Savings Plans coverage and utilization. Show me:
+          1. Current coverage percentage — what portion of my eligible spend is covered?
+          2. Utilization rate — am I using what I've committed to?
+          3. Purchase recommendations — where should I buy more coverage?
+          For recommendations, compare 1-year vs 3-year terms and No Upfront vs All Upfront
+          payment options. Estimate additional monthly savings from each option.
+        tags: [savings-plans, commitments, coverage, utilization]
+        related: ["Reserved Instance Performance", "Comprehensive Optimization Report"]
+
+      - title: "Reserved Instance Performance"
+        description: "RI coverage, utilization, and renewal recommendations"
+        complexity: intermediate
+        prompt: |
+          Show me my Reserved Instance coverage and utilization. Identify:
+          1. RIs with low utilization (paying for capacity I'm not using)
+          2. On-demand spend that could be covered by new RIs
+          3. RIs expiring in the next 60 days that need renewal decisions
+          Estimate the cost impact of any underutilized RIs.
+        tags: [reserved-instances, commitments, coverage, utilization]
+        related: ["Savings Plans Analysis", "Comprehensive Optimization Report"]
+
+      - title: "Free Tier Usage"
+        description: "Current Free Tier consumption relative to limits"
+        complexity: basic
+        prompt: |
+          Show me my current Free Tier usage. For each service with Free Tier benefits,
+          show how much of the free allocation I've consumed and how much remains.
+          Flag any services where I'm at 80% or more of the free limit.
+        tags: [free-tier, limits, usage]
+        related: ["Monthly Cost Summary"]
+
+
+  resource_identification:
+    name: "Resource Identification"
+    icon: "📦"
+    prompts:
+      - title: "Top Cost Resources (All Services)"
+        description: "Most expensive individual resources across your entire account"
+        complexity: intermediate
+        prompt: |
+          Use CUR data to show me the top 20 most expensive resources across all AWS
+          services for last month. Include resource ID, service, region, and cost.
+          Group the results by service so I can see which services have the most
+          expensive individual resources.
+        tags: [resources, top-cost, all-services, resource-level]
+        related: ["Expensive EC2 Instances", "Untagged Resources"]
+
+      - title: "Expensive EC2 Instances"
+        description: "Top EC2 instances by cost with actionable context"
+        complexity: intermediate
+        prompt: |
+          Use CUR data to show me the top 15 most expensive EC2 instances for last month.
+          For each instance, include the resource ID, region, usage type, and total cost.
+          Then check Compute Optimizer for rightsizing recommendations on these specific
+          instances. Estimate total potential savings.
+        tags: [ec2, instances, top-cost, resource-level]
+        related: ["EC2 Rightsizing Opportunities", "EC2 Cost Analysis"]
+
+      - title: "Expensive S3 Buckets"
+        description: "Top S3 buckets by combined storage and request costs"
+        complexity: intermediate
+        prompt: |
+          Use CUR data to show me the top 10 most expensive S3 buckets for last month.
+          Break down each bucket's cost into storage, requests, and data transfer.
+          Identify buckets that might benefit from Intelligent-Tiering or lifecycle policies.
+        tags: [s3, buckets, top-cost, resource-level]
+        related: ["S3 Storage Analysis", "S3 Data Transfer"]
+
+      - title: "Expensive ElastiCache Clusters"
+        description: "Top ElastiCache clusters by cost"
+        complexity: intermediate
+        prompt: |
+          Use CUR data to show me my most expensive ElastiCache clusters for last month.
+          Include cluster ID, engine type, node type, and total cost. Flag any clusters
+          that might be over-provisioned based on their node type.
+        tags: [elasticache, clusters, top-cost, resource-level]
+        related: ["ElastiCache Costs"]
+
+      - title: "Untagged Resources"
+        description: "Resources generating costs without proper cost allocation tags"
+        complexity: intermediate
+        prompt: |
+          Use CUR data to find resources generating significant costs (over $10/month)
+          that lack cost allocation tags. Group by service and show the total untagged
+          spend per service. This helps identify gaps in my tagging strategy for
+          cost attribution.
+        tags: [tags, governance, cost-allocation, resource-level]
+        related: ["Top Cost Resources (All Services)", "Idle Resources"]
+
+      - title: "Resources by Tag"
+        description: "Cost breakdown filtered by a specific tag key/value"
+        complexity: intermediate
+        prompt: |
+          Show me costs grouped by the Environment tag (or whichever cost allocation tag
+          I have). Break down spending by tag value (e.g., Production, Staging, Development)
+          and show which environment is most expensive. Include untagged resources as a
+          separate category.
+        tags: [tags, cost-allocation, environments, governance]
+        related: ["Untagged Resources", "Monthly Cost Summary"]
+
+
+  budget_monitoring:
+    name: "Budget & Anomaly Detection"
+    icon: "📊"
+    prompts:
+      - title: "Budget Status"
+        description: "All configured budgets with current spend vs limit"
+        complexity: basic
+        prompt: |
+          Show me all my AWS budgets and their current status. For each budget, show
+          the limit, actual spend, forecasted spend, and percentage consumed. Flag any
+          budgets that are on track to exceed their limit this month.
+        tags: [budgets, tracking, alerts]
+        related: ["Month-to-Date Spend", "Forecast Next Month"]
+
+      - title: "Cost Anomalies"
+        description: "Unusual spending patterns detected by AWS Cost Anomaly Detection"
+        complexity: basic
+        prompt: |
+          Check for cost anomalies detected in the last 30 days. For each anomaly,
+          show the affected service, the expected vs actual cost, the severity, and
+          the root cause (if identified). Recommend actions to investigate or resolve
+          each anomaly.
+        tags: [anomalies, alerts, unusual-spending]
+        related: ["Daily Spend Analysis", "Cost Change Drivers"]
+
+      - title: "Month-to-Date Spend"
+        description: "Current month's spend compared to the same point last month"
+        complexity: basic
+        prompt: |
+          What's my spend so far this month compared to last month at the same point?
+          Show the total and breakdown by top services. Flag any services that are
+          pacing significantly higher than last month and estimate where I'll end up
+          if the current rate continues.
+        tags: [mtd, pacing, comparison]
+        related: ["Budget Status", "Forecast Next Month"]
+
+      - title: "Forecast Next Month"
+        description: "AWS Cost Explorer forecast for upcoming month"
+        complexity: basic
+        prompt: |
+          Use Cost Explorer's forecast to project my total costs for next month.
+          Compare the forecast to my actual spend last month and highlight the
+          expected change. Break down the forecast by top 5 services if possible.
+        tags: [forecast, prediction, planning]
+        related: ["Budget Status", "Month-to-Date Spend", "Cost Trends (3 months)"]
+
+
+  data_transfer:
+    name: "Data Transfer & Networking"
+    icon: "🌐"
+    prompts:
+      - title: "Overall Data Transfer Costs"
+        description: "Complete data transfer spending across all services and transfer types"
+        complexity: intermediate
+        prompt: |
+          Show me all data transfer costs across all services for last month using Cost
+          Explorer. Break it down by service and by transfer type (inter-region, internet
+          egress, inter-AZ). Identify the top 3 transfer types by cost and recommend
+          which to investigate first for optimization.
+        tags: [data-transfer, networking, overview]
+        related: ["Inter-AZ Data Transfer", "Internet Data Transfer (Egress)", "Data Transfer Optimization"]
+
+      - title: "Inter-Region Data Transfer"
+        description: "Cross-region transfer costs and region pairs"
+        complexity: intermediate
+        prompt: |
+          Analyze my inter-region data transfer costs for last month. Show which regions
+          are transferring the most data using Cost Explorer, then use CUR data to identify
+          the top resources generating cross-region transfer. Recommend whether any
+          workloads should be consolidated into fewer regions.
+        tags: [data-transfer, inter-region, networking, resource-level]
+        related: ["Overall Data Transfer Costs", "Data Transfer Optimization"]
+
+      - title: "Internet Data Transfer (Egress)"
+        description: "Outbound internet transfer costs by service and resource"
+        complexity: intermediate
+        prompt: |
+          Show me my internet data transfer (egress) costs for last month. Use Cost
+          Explorer for the service-level breakdown, then use CUR data to identify the
+          top 15 resources generating the most outbound traffic. Recommend which resources
+          could benefit from CloudFront caching or VPC endpoints.
+        tags: [data-transfer, egress, internet, resource-level]
+        related: ["Overall Data Transfer Costs", "CloudFront Data Transfer"]
+
+      - title: "Inter-AZ Data Transfer"
+        description: "Cross-AZ transfer costs with resource-level attribution"
+        complexity: intermediate
+        prompt: |
+          Analyze my inter-AZ data transfer costs for last month. Use Cost Explorer for
+          the total and service breakdown, then use CUR data to identify the top 20
+          resources generating cross-AZ charges. For the most expensive resources,
+          recommend co-location strategies or architecture changes to reduce cross-AZ
+          traffic. Estimate potential monthly savings from optimization.
+        tags: [data-transfer, inter-az, cross-az, resource-level]
+        related: ["VPC Data Transfer Analysis", "Data Transfer Optimization"]
+
+      - title: "CloudFront Data Transfer"
+        description: "CDN costs by region and distribution"
+        complexity: intermediate
+        prompt: |
+          Analyze my CloudFront data transfer costs for last month. Use Cost Explorer for
+          the regional breakdown, then use CUR data to identify the most expensive
+          distributions. Recommend cache optimization strategies for high-cost distributions.
+        tags: [cloudfront, cdn, data-transfer, resource-level]
+        related: ["Internet Data Transfer (Egress)", "S3 Data Transfer"]
+
+      - title: "NAT Gateway Costs"
+        description: "NAT Gateway spending with resource identification"
+        complexity: intermediate
+        prompt: |
+          Show me my NAT Gateway costs for last month including hourly and data processing
+          charges. Use CUR data to identify which NAT Gateways are most expensive.
+          Recommend which traffic could be routed through VPC endpoints instead (S3,
+          DynamoDB, and other supported services) and estimate the savings.
+        tags: [nat-gateway, networking, vpc, resource-level]
+        related: ["VPC Data Transfer Analysis", "Data Transfer Optimization"]
+
+      - title: "VPC Data Transfer Analysis"
+        description: "Comprehensive VPC transfer costs with optimization recommendations"
+        complexity: advanced
+        prompt: |
+          Analyze my VPC data transfer costs for last month. Start with Cost Explorer for
+          the overview by transfer type (inter-AZ, VPC peering, PrivateLink, Transit Gateway),
+          then use CUR data to identify the top 10 resources driving these costs. Compare
+          with the previous month to identify trends. Recommend specific optimizations
+          (co-location, VPC endpoints, architecture changes) with estimated savings for each.
+          If VPC Flow Logs are available, offer to analyze traffic patterns for deeper insight.
+        tags: [vpc, data-transfer, networking, advanced, resource-level]
+        requires: [CUR data configured]
+        related: ["Inter-AZ Data Transfer", "NAT Gateway Costs", "Top Network Talkers"]
+
+      - title: "ELB Data Transfer Analysis"
+        description: "Load balancer costs including cross-AZ target distribution"
+        complexity: intermediate
+        prompt: |
+          Analyze my Elastic Load Balancer costs for last month. Use Cost Explorer for the
+          total by load balancer type (ALB, NLB, CLB), then use CUR data to identify the
+          most expensive individual load balancers. Flag any with significant cross-AZ
+          traffic to targets and recommend target placement strategies to reduce costs.
+        tags: [elb, alb, nlb, load-balancer, data-transfer, resource-level]
+        related: ["Inter-AZ Data Transfer", "VPC Data Transfer Analysis"]
+
+      - title: "S3 Data Transfer"
+        description: "S3-specific transfer costs by type"
+        complexity: basic
+        prompt: |
+          Show me S3 data transfer costs for last month. Break it down by transfer type
+          (internet egress, CloudFront origin fetch, cross-region replication, S3 Transfer
+          Acceleration). Identify which transfer type is most expensive and recommend
+          optimization strategies.
+        tags: [s3, data-transfer, egress, replication]
+        related: ["S3 Storage Analysis", "CloudFront Data Transfer"]
+
+      - title: "Data Transfer Optimization"
+        description: "Actionable recommendations to reduce transfer costs"
+        complexity: intermediate
+        prompt: |
+          Identify my top 5 opportunities to reduce data transfer costs. For each opportunity:
+          1. What's the current monthly cost?
+          2. What change would reduce it? (VPC endpoints, CloudFront, co-location, etc.)
+          3. What's the estimated monthly savings?
+          Prioritize by savings potential and ease of implementation.
+        tags: [optimization, data-transfer, savings, actionable]
+        related: ["Overall Data Transfer Costs", "NAT Gateway Costs", "Inter-AZ Data Transfer"]
+
+      - title: "Direct Connect vs VPN Costs"
+        description: "Compare connectivity option costs"
+        complexity: intermediate
+        prompt: |
+          Compare my Direct Connect and VPN costs for last month. Show data transfer
+          volumes and costs for each. If I'm using VPN with high transfer volumes,
+          calculate whether Direct Connect would be more cost-effective.
+        tags: [direct-connect, vpn, networking, comparison]
+        related: ["Overall Data Transfer Costs"]
+
+      - title: "API Gateway Data Transfer"
+        description: "API Gateway traffic costs by API"
+        complexity: intermediate
+        prompt: |
+          Show me API Gateway costs for last month using Cost Explorer, then use CUR data
+          to identify which APIs are generating the most traffic and cost. Recommend
+          caching strategies or request optimization for the most expensive APIs.
+        tags: [api-gateway, data-transfer, resource-level]
+        related: ["Internet Data Transfer (Egress)"]
+
+
+  pricing:
+    name: "Pricing & Cost Estimation"
+    icon: "💵"
+    prompts:
+      - title: "EC2 Instance Pricing Comparison"
+        description: "Compare instance type pricing with commitment options"
+        complexity: basic
+        prompt: |
+          Compare pricing for t3.medium, m5.large, and c5.xlarge instances in my primary
+          region. For each, show On-Demand hourly rate and estimate the monthly cost for
+          24/7 usage. Also show the savings percentage with a 1-year No Upfront Savings Plan.
+        tags: [pricing, ec2, comparison, instances]
+        related: ["Savings Plans Analysis", "EC2 Cost Analysis"]
+
+      - title: "RDS Pricing Comparison"
+        description: "Compare database instance pricing across engines and types"
+        complexity: basic
+        prompt: |
+          Compare pricing between db.t3.medium and db.r5.large for MySQL and PostgreSQL
+          RDS. Show On-Demand monthly cost for each combination and the savings with
+          1-year Reserved Instances (No Upfront vs All Upfront).
+        tags: [pricing, rds, database, comparison]
+        related: ["RDS Database Costs", "Reserved Instance Performance"]
+
+      - title: "S3 Storage Class Pricing"
+        description: "Compare storage class costs for different access patterns"
+        complexity: basic
+        prompt: |
+          Compare S3 storage class pricing: Standard, Intelligent-Tiering, Standard-IA,
+          One Zone-IA, Glacier Instant Retrieval, Glacier Flexible, and Glacier Deep Archive.
+          For each, show the per-GB storage cost and retrieval cost. Help me understand
+          which class is best for data accessed daily vs monthly vs rarely.
+        tags: [pricing, s3, storage-classes, comparison]
+        related: ["S3 Storage Analysis"]
+
+      - title: "Data Transfer Pricing Rates"
+        description: "Current data transfer pricing by type and tier"
+        complexity: basic
+        prompt: |
+          Look up current data transfer pricing rates for my primary region. Show rates for:
+          internet egress (by tier), inter-region transfer, inter-AZ transfer, and
+          VPC endpoint data processing. Help me understand which transfer types are most
+          expensive per GB.
+        tags: [pricing, data-transfer, rates]
+        related: ["Overall Data Transfer Costs", "Data Transfer Optimization"]
+
+      - title: "Workload Cost Estimate"
+        description: "Estimate monthly cost for a new workload before deploying"
+        complexity: intermediate
+        prompt: |
+          Help me estimate the monthly cost of a new workload. I need:
+          - 3 m5.xlarge EC2 instances running 24/7
+          - 500 GB gp3 EBS storage per instance
+          - 1 db.r5.large RDS PostgreSQL Multi-AZ instance
+          - 100 GB S3 storage with moderate access
+          - Estimated 500 GB/month internet egress
+          Show the breakdown by component and the total estimated monthly cost.
+        tags: [pricing, estimation, planning, new-workload]
+        related: ["EC2 Instance Pricing Comparison", "RDS Pricing Comparison"]
+
+      - title: "Graviton Migration Savings"
+        description: "Estimate savings from migrating to Graviton instances"
+        complexity: intermediate
+        prompt: |
+          I'm considering migrating from x86 to Graviton (ARM) instances. Compare pricing
+          between my current instance types and their Graviton equivalents (e.g., m5 vs m6g,
+          c5 vs c6g, r5 vs r6g). Calculate the estimated annual savings if I migrate my
+          top 10 most expensive EC2 instances to Graviton equivalents.
+        tags: [pricing, graviton, migration, savings, ec2]
+        related: ["EC2 Rightsizing Opportunities", "EC2 Cost Analysis"]
+
+
+  vpc_flowlogs:
+    name: "VPC Flow Logs Analysis"
+    icon: "🔬"
+    prompts:
+      - title: "Top Network Talkers"
+        description: "Identify instances and IPs generating the most network traffic"
+        complexity: intermediate
+        prompt: |
+          Analyze VPC Flow Logs for the last 24 hours to identify top network talkers.
+          Show me the top 20 instances by total bytes transferred, the top 15
+          source-destination pairs by volume, and a protocol breakdown (TCP, UDP, ICMP).
+          For each top talker, include the instance ID, AZ, and total GB transferred.
+          Highlight any single instance with disproportionately high traffic that might
+          indicate a problem or optimization opportunity.
+        tags: [vpc-flow-logs, traffic, top-talkers, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Internet Gateway Traffic", "Data Transfer Cost Attribution"]
+
+      - title: "Cross-AZ Traffic Investigation"
+        description: "Identify instances communicating across AZs and the cost impact"
+        complexity: advanced
+        prompt: |
+          Investigate cross-AZ traffic patterns using VPC Flow Logs for the last 7 days.
+          Group traffic by source AZ and identify the top 25 instances generating
+          cross-AZ data transfer. Break down by destination port to understand traffic
+          type (web, database, cache, messaging). Calculate the estimated cost impact
+          using current inter-AZ rates for my region, and recommend which instance pairs
+          should be co-located in the same AZ to reduce costs.
+        tags: [vpc-flow-logs, cross-az, inter-az, optimization, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Inter-AZ Data Transfer", "Data Transfer Cost Attribution"]
+
+      - title: "Rejected Traffic Analysis"
+        description: "Security-focused analysis of blocked connection attempts"
+        complexity: intermediate
+        prompt: |
+          Analyze rejected traffic in VPC Flow Logs for the last 24 hours (action=REJECT).
+          Show me the top 20 source IPs being blocked, the top 20 targeted destination
+          ports, and the most targeted instances. Classify the rejected traffic into
+          categories (potential port scanning, brute force attempts, misconfigured
+          security groups blocking legitimate traffic). Recommend security group
+          adjustments if legitimate traffic appears to be blocked.
+        tags: [vpc-flow-logs, security, rejected, blocked, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Security Group Traffic Audit"]
+
+      - title: "Internet Gateway Traffic"
+        description: "Analyze internet-bound egress traffic patterns and costs"
+        complexity: advanced
+        prompt: |
+          Analyze internet-bound traffic using VPC Flow Logs for the last 7 days. Focus
+          on egress to non-RFC1918 destinations. Show me the top 20 instances by internet
+          egress volume, the destination port breakdown (HTTPS, HTTP, DNS, custom), and
+          identify traffic to AWS service IP ranges that should use VPC endpoints instead.
+          Calculate estimated egress costs using current tiered pricing for my region and
+          recommend specific optimizations (CloudFront, VPC endpoints, PrivateLink).
+        tags: [vpc-flow-logs, egress, internet, optimization, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Internet Data Transfer (Egress)", "NAT Gateway Traffic Analysis"]
+
+      - title: "NAT Gateway Traffic Analysis"
+        description: "Identify what's driving NAT Gateway data processing costs"
+        complexity: advanced
+        prompt: |
+          Analyze traffic through NAT Gateways using VPC Flow Logs for the last 7 days.
+          Identify the top 20 instances using NAT Gateways by data volume, the external
+          destinations they're reaching, and which traffic is going to AWS services.
+          Calculate the NAT Gateway data processing cost per instance using current rates
+          for my region. Recommend which instances should use VPC endpoints instead
+          (S3, DynamoDB, and other supported services) and estimate the monthly savings
+          from each VPC endpoint.
+        tags: [vpc-flow-logs, nat-gateway, optimization, vpc-endpoints, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["NAT Gateway Costs", "Data Transfer Optimization"]
+
+      - title: "Database Traffic Patterns"
+        description: "Analyze traffic to database ports for optimization and security"
+        complexity: advanced
+        prompt: |
+          Analyze database traffic patterns using VPC Flow Logs for the last 7 days.
+          Focus on common database ports (3306, 5432, 1521, 1433, 6379, 11211, 27017).
+          Show me the top 20 clients connecting to databases by data volume, identify
+          cross-AZ database traffic and its cost impact, and flag any database connections
+          from unexpected sources. Recommend read replica placement, connection pooling,
+          or caching strategies based on the traffic patterns observed.
+        tags: [vpc-flow-logs, database, traffic-patterns, security, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["RDS Database Costs", "Cross-AZ Traffic Investigation"]
+
+      - title: "Application Traffic Deep Dive"
+        description: "Multi-tier application traffic analysis for architecture optimization"
+        complexity: advanced
+        prompt: |
+          Analyze application traffic patterns using VPC Flow Logs for the last 24 hours.
+          Identify tier-to-tier communication (web→app→database→cache) based on port
+          patterns. Show the top 20 instance pairs by traffic volume, identify cross-AZ
+          communication between tiers, and flag any single instances handling
+          disproportionate traffic (potential bottlenecks). Recommend architecture
+          improvements: AZ-aware routing, connection pooling, caching, or scaling.
+        tags: [vpc-flow-logs, application, architecture, multi-tier, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Cross-AZ Traffic Investigation", "Database Traffic Patterns"]
+
+      - title: "Security Group Traffic Audit"
+        description: "Validate security group rules against actual traffic patterns"
+        complexity: advanced
+        prompt: |
+          Audit traffic patterns using VPC Flow Logs for the last 7 days to validate
+          security group effectiveness. Show me accepted traffic by port and source type
+          (internal VPC, VPN, internet), rejected traffic patterns, and identify:
+          1. Ports with security group rules but zero traffic (unused rules to remove)
+          2. Legitimate traffic being rejected (missing rules to add)
+          3. Overly broad rules (0.0.0.0/0) where traffic only comes from specific CIDRs
+          4. Management ports (22, 3389) exposed to internet
+          Recommend specific security group tightening based on actual usage.
+        tags: [vpc-flow-logs, security, security-groups, audit, compliance, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Rejected Traffic Analysis"]
+
+      - title: "Data Transfer Cost Attribution"
+        description: "Attribute network transfer costs to specific instances and traffic types"
+        complexity: advanced
+        prompt: |
+          Use VPC Flow Logs for the last 7 days to attribute data transfer costs to
+          specific resources. For each of the top 20 instances by traffic volume, calculate
+          estimated costs for: cross-AZ transfer, NAT Gateway processing, and internet
+          egress using current pricing for my region. Identify the most expensive instances
+          overall and recommend specific optimizations (co-location, VPC endpoints,
+          CloudFront) with estimated savings for each. Project the monthly cost if current
+          patterns continue.
+        tags: [vpc-flow-logs, cost-attribution, optimization, network]
+        requires: [VPC Flow Logs enabled and configured]
+        related: ["Top Network Talkers", "Data Transfer Optimization", "Cross-AZ Traffic Investigation"]
+
+
+  multi_account:
+    name: "Multi-Account & Organization"
+    icon: "🏢"
+    prompts:
+      - title: "Account Cost Comparison"
+        description: "Compare spending across linked accounts in your organization"
+        complexity: intermediate
+        prompt: |
+          Show me costs broken down by linked account for last month. Identify the top 10
+          most expensive accounts, show their month-over-month change, and flag any accounts
+          with spending growth above 25%. Help me understand which accounts are driving
+          overall cost increases.
+        tags: [multi-account, organization, accounts, comparison]
+        related: ["Monthly Cost Summary", "Cost Change Drivers"]
+
+      - title: "Cross-Account Network Analysis"
+        description: "Network traffic patterns across multiple accounts"
+        complexity: advanced
+        prompt: |
+          Analyze VPC Flow Logs across all configured member accounts for the last 7 days.
+          Show me the top instances by traffic volume in each account and identify
+          cross-account communication patterns. Calculate the total data transfer cost
+          per account and recommend optimizations.
+        tags: [multi-account, vpc-flow-logs, network, cross-account]
+        requires: [Multi-account VPC Flow Logs configured]
+        related: ["Top Network Talkers", "Account Cost Comparison"]
+
+      - title: "Optimization by Account"
+        description: "Recommendations grouped by account for delegation"
+        complexity: intermediate
+        prompt: |
+          Show me cost optimization recommendations grouped by linked account. Use Cost
+          Optimization Hub to list recommendations summarized by account ID. For each
+          account, show the total estimated monthly savings and the number of actionable
+          recommendations. This helps me delegate optimization work to account owners.
+        tags: [multi-account, optimization, recommendations, delegation]
+        related: ["Comprehensive Optimization Report", "Account Cost Comparison"]
+
+      - title: "Billing Group Analysis"
+        description: "Cost analysis using Billing Conductor groups"
+        complexity: intermediate
+        prompt: |
+          List my billing groups and show cost reports for each. Compare spending across
+          billing groups and identify which group has the highest costs and fastest growth.
+          Show account associations for each billing group.
+        tags: [billing-conductor, billing-groups, organization]
+        requires: [Billing Conductor configured]
+        related: ["Account Cost Comparison"]
+
+
+  workflows:
+    name: "Guided Workflows"
+    icon: "🗺️"
+    description: "Multi-step analysis sequences — start here and follow the related prompts"
+    prompts:
+      - title: "New Account Cost Review"
+        description: "First-time comprehensive review of an AWS account's spending"
+        complexity: basic
+        prompt: |
+          I'm reviewing this AWS account's costs for the first time. Give me a comprehensive
+          overview:
+          1. Total spend for last month and the 3-month trend
+          2. Top 10 services by cost
+          3. Top 10 most expensive individual resources (use CUR data)
+          4. Any cost anomalies detected recently
+          5. Quick wins: check Cost Optimization Hub and Compute Optimizer for immediate
+             savings opportunities
+          Summarize the total potential monthly savings and recommend what to investigate next.
+        tags: [workflow, overview, first-time, comprehensive]
+        related: ["Comprehensive Optimization Report", "Untagged Resources", "Budget Status"]
+
+      - title: "Cost Spike Investigation"
+        description: "Systematic investigation of a sudden cost increase"
+        complexity: intermediate
+        prompt: |
+          I noticed a cost spike. Help me investigate:
+          1. Show me daily costs for the last 2 weeks to identify when the spike started
+          2. Use cost change drivers to identify what service/usage type caused it
+          3. Drill into the responsible service using CUR data to find specific resources
+          4. Check if there's a matching cost anomaly detected by AWS
+          5. Recommend whether this is a one-time event or ongoing concern
+        tags: [workflow, investigation, spike, troubleshooting]
+        related: ["Cost Anomalies", "Daily Spend Analysis", "Cost Change Drivers"]
+
+      - title: "Monthly FinOps Review"
+        description: "Structured monthly review for FinOps practitioners"
+        complexity: intermediate
+        prompt: |
+          Run my monthly FinOps review:
+          1. Month-over-month total cost comparison
+          2. Top 5 cost change drivers (what increased and decreased)
+          3. Savings Plans and Reserved Instance utilization rates
+          4. Budget status — am I on track?
+          5. New optimization recommendations since last month
+          6. Forecast for next month
+          Summarize key findings and action items.
+        tags: [workflow, finops, monthly-review, comprehensive]
+        related: ["Monthly Cost Summary", "Savings Plans Analysis", "Budget Status", "Forecast Next Month"]
+
+      - title: "Data Transfer Cost Reduction"
+        description: "End-to-end workflow to identify and reduce data transfer costs"
+        complexity: advanced
+        prompt: |
+          Help me systematically reduce my data transfer costs:
+          1. Show total data transfer costs by type (egress, inter-AZ, inter-region)
+          2. Identify the top resources driving each transfer type using CUR data
+          3. For inter-AZ costs: recommend co-location strategies
+          4. For egress costs: recommend CloudFront or VPC endpoints
+          5. For NAT Gateway costs: identify traffic that should use VPC endpoints
+          6. Calculate total estimated monthly savings from all recommendations
+          If VPC Flow Logs are available, offer to do deeper traffic pattern analysis.
+        tags: [workflow, data-transfer, optimization, comprehensive]
+        requires: [CUR data configured]
+        related: ["Overall Data Transfer Costs", "NAT Gateway Costs", "Inter-AZ Data Transfer"]
+
+# ============================================================================
+# CUSTOM PROMPTS
+# ============================================================================
+# Add your own custom prompts below! Follow the same format as above.
+#
+# Example:
+#
+#   custom:
+#     name: "My Custom Queries"
+#     icon: "🎯"
+#     prompts:
+#       - title: "My Team's EC2 Costs"
+#         description: "EC2 costs filtered to my team's tagged resources"
+#         complexity: basic
+#         prompt: "Show me EC2 costs for resources tagged with Team=my-team for last month"
+#         tags: [custom, ec2, team]
+#         related: ["EC2 Cost Analysis"]
+#

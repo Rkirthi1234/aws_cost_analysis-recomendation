@@ -1,0 +1,109 @@
+# Cost Analyzer Agent - Deployment Configuration
+# This file is used during agent deployment to AWS Bedrock AgentCore
+#
+# Quick setup:
+#   1. Set your AWS region
+#   2. Configure your accounts (payer + member)
+#   3. Deploy with ./deploy.sh
+
+# =============================================================================
+# AWS Region
+# =============================================================================
+aws:
+  region: us-east-1  # Your AWS region
+
+# =============================================================================
+# Account Configuration (REQUIRED — update with your account details)
+# =============================================================================
+#
+# - Exactly one payer account is required (must have role_arn)
+# - Member accounts may omit role_arn when the agent runs in the same account
+# - Athena config can appear on any account type (payer or member)
+# - The table field is optional — when omitted, the agent auto-discovers tables
+#
+# Default scenario: CUR data in payer account, VPC Flow Logs in member accounts.
+# All accounts require role_arn for cross-account access via STS AssumeRole.
+
+accounts:
+  # Payer account — billing APIs and CUR Athena data
+  - account_id: "<PAYER_ACCOUNT_ID>"
+    role_arn: "arn:aws:iam::<PAYER_ACCOUNT_ID>:role/CostAnalyzerAgentPayerRole"
+    account_type: payer
+    athena:
+      cur:
+        database: <YOUR_CUR_DATABASE>
+        # table: <YOUR_CUR_TABLE>  # Optional — omit to auto-discover
+
+  # Member account with VPC Flow Log data
+  - account_id: "<MEMBER_ACCOUNT_ID>"
+    role_arn: "arn:aws:iam::<MEMBER_ACCOUNT_ID>:role/CostAnalyzerAgentMemberRole"
+    account_type: member
+    athena:
+      vpc_flowlogs:
+        database: <YOUR_VPC_DATABASE>
+        # table: <YOUR_VPC_TABLE>  # Optional — omit to auto-discover
+
+# =============================================================================
+# AgentCore Deployment Configuration
+# =============================================================================
+agentcore:
+  execution_role_arn: ""  # Optional: IAM role ARN (leave empty for auto-creation)
+
+# =============================================================================
+# Agent Model Configuration
+# =============================================================================
+agent:
+  model:
+    provider: bedrock
+    model_id: global.anthropic.claude-sonnet-4-5-20250929-v1:0
+    temperature: 0.1
+    max_tokens: 8192
+    cache_tools: true  # Enable tool caching (reduces cost by ~90%)
+    cache_ttl: "5m"    # Cache TTL: "5m" (interactive) or "1h" (batch)
+
+# =============================================================================
+# MCP (Model Context Protocol) Configuration
+# =============================================================================
+mcp:
+  enabled: true
+  servers:
+    aws_knowledge:
+      type: http
+      url: https://knowledge-mcp.global.api.aws
+      enabled: true
+
+# =============================================================================
+# Tools Configuration
+# =============================================================================
+tools:
+  enabled:
+    - date
+    - athena
+    - analysis
+    - billing
+    - mcp
+
+# =============================================================================
+# Alternative: Centralized Logging Account
+# =============================================================================
+# Use this instead of the accounts section above if the agent runs in the same
+# account as CUR and VPC Flow Log data. No STS AssumeRole needed for Athena
+# queries since the data is local. The payer account is only needed for billing
+# API calls.
+#
+# accounts:
+#   # Payer account — billing APIs only
+#   - account_id: "<PAYER_ACCOUNT_ID>"
+#     role_arn: "arn:aws:iam::<PAYER_ACCOUNT_ID>:role/CostAnalyzerAgentPayerRole"
+#     account_type: payer
+#
+#   # Local account — agent runs here, no role_arn needed
+#   - account_id: "<LOCAL_ACCOUNT_ID>"
+#     account_type: member
+#     athena:
+#       cur:
+#         database: <YOUR_CUR_DATABASE>
+#         # table: <YOUR_CUR_TABLE>  # Optional — omit to auto-discover
+#       vpc_flowlogs:
+#         database: <YOUR_VPC_DATABASE>
+#         # table: <YOUR_VPC_TABLE>  # Optional — omit to auto-discover
