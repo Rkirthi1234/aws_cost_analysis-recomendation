@@ -158,3 +158,12 @@ The agent automatically routes queries to the right tools:
 - **Best practices** (e.g., "how to optimize S3") → AWS Knowledge MCP tools
 - **Alternative-service evidence** (only when `alternatives.enabled` is true) → `identify_high_cost_services`, then `collect_usage_evidence` / `collect_resource_inventory`
 - **Cost threshold alerts** (only when `threshold_detection.enabled` is true) → `detect_cost_threshold_alerts`
+# Validated alternative-service tools
+
+With `alternatives.enabled: true`, `analyze_cost_recommendations` executes the
+on-demand threshold/evidence/compatibility/pricing/report flow.
+`evaluate_service_alternative` evaluates one approved catalog alternative, with
+optional `resource_id`, independently of a threshold. Both accept dated,
+resource-scoped `workload_inputs`. They never invent missing application facts,
+prices or resource cost attribution and never modify AWS resources or send email/SNS.
+See [schemas, configuration and CLI usage](recommendations.md).

@@ -1,0 +1,1318 @@
+{
+  "source_note": "Selected unmodified AWS public Price List product/OnDemand structures, downloaded for offline schema verification. No account data.",
+  "products": [
+    {
+      "product": {
+        "sku": "8CESGAFWKAJ98PME",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "usagetype": "USE1-Fargate-vCPU-Hours:perCPU",
+          "operation": "",
+          "cputype": "perCPU",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "8CESGAFWKAJ98PME.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "8CESGAFWKAJ98PME",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "8CESGAFWKAJ98PME.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "8CESGAFWKAJ98PME.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - vCPU - US East (N.Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0404800000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "7KPDPTDSCT4J3Z64",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "usagetype": "USE1-Fargate-EphemeralStorage-GB-Hours",
+          "operation": "",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Elastic Container Service",
+          "storagetype": "default"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "7KPDPTDSCT4J3Z64.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "7KPDPTDSCT4J3Z64",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "7KPDPTDSCT4J3Z64.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "7KPDPTDSCT4J3Z64.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - Ephemeral Storage - US East (N. Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Hours",
+                "pricePerUnit": {
+                  "USD": "0.0001110000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "PBZNQUSEXZUC34C9",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "usagetype": "USE1-Fargate-GB-Hours",
+          "operation": "",
+          "memorytype": "perGB",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "PBZNQUSEXZUC34C9.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "PBZNQUSEXZUC34C9",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "PBZNQUSEXZUC34C9.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "PBZNQUSEXZUC34C9.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - Memory  - US East (N.Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0044450000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "UNH9KPQP7W7C66C9",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "usagetype": "USE1-Fargate-ARM-GB-Hours",
+          "operation": "",
+          "cpuArchitecture": "ARM",
+          "memorytype": "perGB",
+          "regionCode": "us-east-1",
+          "resource": "per GB per hour",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "UNH9KPQP7W7C66C9.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "UNH9KPQP7W7C66C9",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "UNH9KPQP7W7C66C9.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "UNH9KPQP7W7C66C9.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - ARM - Memory - US East (N. Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0035600000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "XSZATS4VYMDC9CYN",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "usagetype": "USE1-Fargate-ARM-vCPU-Hours:perCPU",
+          "operation": "",
+          "cpuArchitecture": "ARM",
+          "cputype": "perCPU",
+          "regionCode": "us-east-1",
+          "resource": "per vCPU per hour",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "XSZATS4VYMDC9CYN.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "XSZATS4VYMDC9CYN",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "XSZATS4VYMDC9CYN.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "XSZATS4VYMDC9CYN.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - ARM - vCPU - US East (N. Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0323800000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "9D3ZWXRS2VXMZET6",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "operatingSystem": "Windows",
+          "usagetype": "USE1-Fargate-Windows-OS-Hours:perCPU",
+          "operation": "",
+          "cputype": "perCPU OS License Fee",
+          "regionCode": "us-east-1",
+          "resource": "OS License Fee per vCPU per hour",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "9D3ZWXRS2VXMZET6.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "9D3ZWXRS2VXMZET6",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "9D3ZWXRS2VXMZET6.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "9D3ZWXRS2VXMZET6.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - Windows - OS - US East (N.Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0460000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "8QDMJPGQCM368Z6X",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "operatingSystem": "Windows",
+          "usagetype": "USE1-Fargate-Windows-GB-Hours",
+          "operation": "",
+          "memorytype": "perGB",
+          "regionCode": "us-east-1",
+          "resource": "per GB per hour",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "8QDMJPGQCM368Z6X.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "8QDMJPGQCM368Z6X",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "8QDMJPGQCM368Z6X.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "8QDMJPGQCM368Z6X.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - Windows - Memory  - US East (N.Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0051117500"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "RF2BUTAD289DREDC",
+        "productFamily": "Compute",
+        "attributes": {
+          "servicecode": "AmazonECS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "tenancy": "Shared",
+          "operatingSystem": "Windows",
+          "usagetype": "USE1-Fargate-Windows-vCPU-Hours:perCPU",
+          "operation": "",
+          "cputype": "perCPU",
+          "regionCode": "us-east-1",
+          "resource": "per vCPU per hour",
+          "servicename": "Amazon Elastic Container Service"
+        }
+      },
+      "serviceCode": "AmazonECS",
+      "publicationDate": "2026-11-11T23:46:23Z",
+      "terms": {
+        "OnDemand": {
+          "RF2BUTAD289DREDC.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "RF2BUTAD289DREDC",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "RF2BUTAD289DREDC.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "RF2BUTAD289DREDC.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Fargate - Windows - vCPU - US East (N.Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "hours",
+                "pricePerUnit": {
+                  "USD": "0.0465520000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "K7BX6567RJ67A2KE",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Requests-ARM",
+          "groupDescription": "Invocation call for a Lambda function for ARM",
+          "usagetype": "Request-ARM",
+          "operation": "",
+          "regionCode": "us-east-1",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "K7BX6567RJ67A2KE.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "K7BX6567RJ67A2KE",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "K7BX6567RJ67A2KE.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "K7BX6567RJ67A2KE.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Lambda - Total Requests for ARM - US East (Northern Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "Requests",
+                "pricePerUnit": {
+                  "USD": "0.0000002000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "ZQVCC2M69R4S79XS",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "Any",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Requests",
+          "groupDescription": "Invocation call for a Lambda function",
+          "usagetype": "Global-Request",
+          "operation": "",
+          "regionCode": "",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "ZQVCC2M69R4S79XS.A429C66SYZ": {
+            "offerTermCode": "A429C66SYZ",
+            "sku": "ZQVCC2M69R4S79XS",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "ZQVCC2M69R4S79XS.A429C66SYZ.SB2VSFF4TP": {
+                "rateCode": "ZQVCC2M69R4S79XS.A429C66SYZ.SB2VSFF4TP",
+                "description": "AWS Lambda - Requests Free Tier - 1,000,000 Requests",
+                "beginRange": "0",
+                "endRange": "1000000",
+                "unit": "Request",
+                "pricePerUnit": {
+                  "USD": "0.0000000000"
+                },
+                "appliesTo": [
+                  "8FY96CH95ZA8NU5C",
+                  "VXJTSR9CJSBFXG5K",
+                  "KY96C7U4EB95UXGK",
+                  "F9T53VWVKRT6G32X",
+                  "EXZWANHF3J8G524N",
+                  "B22EKFMS5UB7E4DB",
+                  "XM5KDGVKY9KYJWCG",
+                  "VPGUBFQ4KNZKMKGJ",
+                  "89U8ZQR2ZV45HXWY",
+                  "4JWH9XJEQW57HPK7",
+                  "D9Z54P78JUX2Y552",
+                  "DMJPKNDPVRPMG2E7",
+                  "P4EV9BBTWDQ35DG2",
+                  "476SBHCHQKEMB5CF",
+                  "EMZ8YZDPGWMDYZNK",
+                  "75D867BXR9WJ9F77",
+                  "E7YK4NJVGVSYK2HH",
+                  "XPFR3MTP3RW5GRTN",
+                  "YV5CBXWN5ARWJ7V9",
+                  "R3N9VPKCMSVAJDEH",
+                  "NCR6U4F9R96E94YR",
+                  "PV7EVKE5W5DV9HR7",
+                  "2PJ77N2RZDFUWCYT",
+                  "ZWHFK83WS2P4WZR6",
+                  "BVPQ9WHBE3SM65K7",
+                  "FPS5FM45229RTFBT",
+                  "B5V2RNHAWGVJBZD3",
+                  "5JXCX35TH2MPMFMW",
+                  "G87G4VHC8MFGZYZU",
+                  "ED4MANDMTGZ4Z9QF",
+                  "3NMC4MZ2CDC4MT62",
+                  "RN53C25R9GDX9T49",
+                  "68H82NC62DFBNEVM",
+                  "XJDGEW4KCCD2P5TG",
+                  "92KS5FMQEEJ39ACN",
+                  "GU2ZS9HVP6QTQ7KE",
+                  "NFXH9EUGP7BUPE4A",
+                  "FMKMXUNY35KEUAM3",
+                  "CKZQ3D25MV9ET243",
+                  "YY4C5XTAZNQPB6J6",
+                  "K4KA7GJPQTT3ZJ5A",
+                  "V5T5H5YEU5SUN3C2",
+                  "4KD96CKPZF9FJUJ9",
+                  "VUQUVJRYRZKGXHKX",
+                  "EQE7YY7WBWZFB46G",
+                  "7TZ969MZND3Z6HD7",
+                  "BBNA8X4S2N3SMD7K",
+                  "6GFK8TZW8U8G9MUB",
+                  "UVYYDZQ83GKQ2K6C",
+                  "W5998MSDP4P5N43C",
+                  "K9DMCWXXQT7TQSWX",
+                  "5ZYZJ29X3PDJ9BZK",
+                  "AA4Q79463N2JQHZA",
+                  "KERWZD8CJ22SEZWT",
+                  "ZW6UHD4Q6EPUCZWU",
+                  "NDYBVXT3KB548Z2A",
+                  "RYFSQRRXQ4R9CK7A",
+                  "UH8TQNRPPRZ9TJ4V",
+                  "RKMA4PX3K8H4VAP4",
+                  "DV2YFXRNHNJFTDP3",
+                  "S2Y42KE6NKHC879T",
+                  "3T9634R2MFT46X4K",
+                  "EE6A5VEB3PCF9VKU",
+                  "HPTUCREBP3C88BAZ",
+                  "GVB4MJBFXA3BX4M6",
+                  "36D3E7396ZKUSWWW",
+                  "D4TPQYY66DKTZWX9",
+                  "R2QWMZCXCNAMHHT9",
+                  "BNQXHCKJQCQXPHE8",
+                  "MN74ND7YYK8MBEC6",
+                  "K7BX6567RJ67A2KE",
+                  "6SKZPR8753NAAQ4W",
+                  "T34KQWJP89CNB5GZ",
+                  "3BE8DYKG4FYSZGDW",
+                  "DJNVRSYVP8QY93QP",
+                  "GRP2QG4WUGQFGJ6T",
+                  "574VQJ288VE2ZGMU",
+                  "ZEA64MMVK5QRB5TC"
+                ]
+              }
+            },
+            "termAttributes": {
+              "Restriction": "Limited SKU Usage"
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "72SBSFWPMDTH8S3J",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Duration-ARM",
+          "groupDescription": "Invocation duration weighted by memory assigned to function, measured in GB-s for ARM",
+          "usagetype": "Lambda-GB-Second-ARM",
+          "operation": "",
+          "regionCode": "us-east-1",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "72SBSFWPMDTH8S3J.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "72SBSFWPMDTH8S3J",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "72SBSFWPMDTH8S3J.JRTCKXETXF.6NBUNBXSC3": {
+                "rateCode": "72SBSFWPMDTH8S3J.JRTCKXETXF.6NBUNBXSC3",
+                "description": "AWS Lambda - Total Compute for ARM - US East (Northern Virginia)-Tier-1",
+                "beginRange": "0",
+                "endRange": "7500000000",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000133334"
+                },
+                "appliesTo": []
+              },
+              "72SBSFWPMDTH8S3J.JRTCKXETXF.6JGAYSJBNY": {
+                "rateCode": "72SBSFWPMDTH8S3J.JRTCKXETXF.6JGAYSJBNY",
+                "description": "AWS Lambda - Total Compute for ARM - US East (Northern Virginia)-Tier-2",
+                "beginRange": "7500000000",
+                "endRange": "18750000000",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000120001"
+                },
+                "appliesTo": []
+              },
+              "72SBSFWPMDTH8S3J.JRTCKXETXF.AVR3V96UTF": {
+                "rateCode": "72SBSFWPMDTH8S3J.JRTCKXETXF.AVR3V96UTF",
+                "description": "AWS Lambda - Total Compute for ARM - US East (Northern Virginia)-Tier-3",
+                "beginRange": "18750000000",
+                "endRange": "Inf",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000106667"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "TG3M4CAGBA3NYQBH",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Duration",
+          "groupDescription": "Invocation duration weighted by memory assigned to function, measured in GB-s",
+          "usagetype": "Lambda-GB-Second",
+          "operation": "",
+          "regionCode": "us-east-1",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "TG3M4CAGBA3NYQBH.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "TG3M4CAGBA3NYQBH",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "TG3M4CAGBA3NYQBH.JRTCKXETXF.CUKFZ388N3": {
+                "rateCode": "TG3M4CAGBA3NYQBH.JRTCKXETXF.CUKFZ388N3",
+                "description": "AWS Lambda - Total Compute - US East (Northern Virginia)-Tier-1",
+                "beginRange": "0",
+                "endRange": "6000000000",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000166667"
+                },
+                "appliesTo": []
+              },
+              "TG3M4CAGBA3NYQBH.JRTCKXETXF.QZE2SB4KVB": {
+                "rateCode": "TG3M4CAGBA3NYQBH.JRTCKXETXF.QZE2SB4KVB",
+                "description": "AWS Lambda - Total Compute - US East (Northern Virginia)-Tier-2",
+                "beginRange": "6000000000",
+                "endRange": "15000000000",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000150000"
+                },
+                "appliesTo": []
+              },
+              "TG3M4CAGBA3NYQBH.JRTCKXETXF.V7R92EXG27": {
+                "rateCode": "TG3M4CAGBA3NYQBH.JRTCKXETXF.V7R92EXG27",
+                "description": "AWS Lambda - Total Compute - US East (Northern Virginia)-Tier-3",
+                "beginRange": "15000000000",
+                "endRange": "Inf",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000133334"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "4VCGJ7EG8PJVZG7S",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "Any",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Duration",
+          "groupDescription": "Invocation duration weighted by memory assigned to function, measured in GB-s",
+          "usagetype": "Global-Lambda-GB-Second",
+          "operation": "",
+          "regionCode": "",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "4VCGJ7EG8PJVZG7S.A429C66SYZ": {
+            "offerTermCode": "A429C66SYZ",
+            "sku": "4VCGJ7EG8PJVZG7S",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "4VCGJ7EG8PJVZG7S.A429C66SYZ.KJYPJPDD2A": {
+                "rateCode": "4VCGJ7EG8PJVZG7S.A429C66SYZ.KJYPJPDD2A",
+                "description": "AWS Lambda - Compute Free Tier - 400,000 GB-Seconds",
+                "beginRange": "0",
+                "endRange": "400000",
+                "unit": "Lambda-GB-Second",
+                "pricePerUnit": {
+                  "USD": "0.0000000000"
+                },
+                "appliesTo": [
+                  "RUA4GEMXYRH9896Q",
+                  "79GRE5UQB86PEDTE",
+                  "ACUC37K5K3N7C85Q",
+                  "3BYZH4NKJN8TJUQ6",
+                  "CHGDQQ3YSPF93CBA",
+                  "72SBSFWPMDTH8S3J",
+                  "H6FQK2WA7RDQ5V8X",
+                  "TV26AWZ6ZNPAX59Z",
+                  "D9T9NECWKTB5WH67",
+                  "VGMFG9KJ58Z2FK83",
+                  "92C8Z466WVKPRP7S",
+                  "GYF72JP64WEAKPUB",
+                  "X48KB4DPQX4RKSY4",
+                  "WH7JAAY3UGC8KHEC",
+                  "6PPNGCBXY95TENXZ",
+                  "535H5MEDDCPZTSAG",
+                  "AW8K7Q9ZMMBBP9W6",
+                  "JNXN2GCNDMDR7JAF",
+                  "TG3M4CAGBA3NYQBH",
+                  "JUEJEGS4CE8UUZEP",
+                  "Z6UGBG979PFHQNPH",
+                  "6W6YS8N9UUWK42HD",
+                  "Q5FVKYAA7TVWEYJW",
+                  "GJ7G7EUMDKUWJE2B",
+                  "P44629QEZBV3SH4T",
+                  "RP9RSZYUC96SQ4G2",
+                  "PHDF9YNAFR3HDSR8",
+                  "HTQZ78UWV8DFX49Y",
+                  "Y9MYZCDTMAKCDR6D",
+                  "46GNEXAQAPS9YGE2",
+                  "KS26AK5FJMDYPXSF",
+                  "69Y7TUFYEF9HAV59",
+                  "9EQKNHGVQZ99FYAZ",
+                  "JZF5EBXY9YXH6KJZ",
+                  "K7NQZ75EHFKR2U2R",
+                  "U6YRFNVKQZTX8VF2",
+                  "BF3RMJFYR9ZK3K9E",
+                  "WW6YFYVSDJAEJEZW",
+                  "2PW46FQRKMQMYQVF",
+                  "TYPBRHCXJ9JT6HMW",
+                  "UBVQ8M4ZYG32RFDU",
+                  "NYVZUNE2ERJBX52D",
+                  "FSYUV9NMNDEXRJ5H",
+                  "XX6J9KCM423YDBZM",
+                  "HBHNHZU5GAMUNNJH",
+                  "S4ZKFHQ6B28FBYVW",
+                  "ZSE7CMBEBTMPH8ET",
+                  "4NX7CSSF3DVPXWBT",
+                  "V3FAJBSMWXEXYUD7",
+                  "KDEJ26SV7QK2N7DW",
+                  "XVFAA23C65JJZNNW",
+                  "DQSCCD3863BVQARD",
+                  "JMYXZ4MKRUCS2X8Q",
+                  "R3C6YVZV7TF52KUE",
+                  "VRFJ836X75T58FNT",
+                  "XZG2GSVN4SF6M4GV",
+                  "KXNSA7NBRHBHXXPS",
+                  "N7S38YMSMVSPHNAH",
+                  "3NTSY6TBUTNFSSPN",
+                  "TZ37H3DV8JXUESM7",
+                  "SGGKTWDV7PGMPPSJ",
+                  "XCU6U9G4FCKZQWG9",
+                  "TQNRYWE9JKMETPM3",
+                  "7N49FRQMXS49C2QS",
+                  "Y3J9NSBFENB45VFD",
+                  "7V27U9PFRJGUDWJ8",
+                  "67ZV6RMYY72YSRDC",
+                  "EZZMW8SEEDT6E2G5",
+                  "T3BEHFG5V4TZDT76",
+                  "4KSP88F2GNAU7KED",
+                  "HQWXQQHHTTTVSUH2",
+                  "SWU8SVYB8U6S2RXR",
+                  "SKKKJURRUZNWWKF9",
+                  "QVV5SPACJCKHAF8A",
+                  "3K7FRNFY6NU8GPC9",
+                  "U9BBUJHRSYYFC597",
+                  "KSD76ZR243WEPWRS",
+                  "HZSTP74UT6DRDTP6"
+                ]
+              }
+            },
+            "termAttributes": {
+              "Restriction": "Limited SKU Usage"
+            }
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "GU2ZS9HVP6QTQ7KE",
+        "productFamily": "Serverless",
+        "attributes": {
+          "servicecode": "AWSLambda",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "group": "AWS-Lambda-Requests",
+          "groupDescription": "Invocation call for a Lambda function",
+          "usagetype": "Request",
+          "operation": "",
+          "regionCode": "us-east-1",
+          "servicename": "AWS Lambda"
+        }
+      },
+      "serviceCode": "AWSLambda",
+      "publicationDate": "2026-11-11T22:30:04Z",
+      "terms": {
+        "OnDemand": {
+          "GU2ZS9HVP6QTQ7KE.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "GU2ZS9HVP6QTQ7KE",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "GU2ZS9HVP6QTQ7KE.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "GU2ZS9HVP6QTQ7KE.JRTCKXETXF.6YS6EN2CT7",
+                "description": "AWS Lambda - Total Requests - US East (Northern Virginia)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "Requests",
+                "pricePerUnit": {
+                  "USD": "0.0000002000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "7GYUVAA992PFJPCB",
+        "productFamily": "Database Storage",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storageMedia": "SSD",
+          "volumeType": "General Purpose-Aurora",
+          "minVolumeSize": "10 GB",
+          "maxVolumeSize": "64 TB",
+          "engineCode": "21",
+          "databaseEngine": "Aurora PostgreSQL",
+          "deploymentOption": "Single-AZ",
+          "usagetype": "Aurora:StorageUsage",
+          "operation": "CreateDBInstance:0021",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "7GYUVAA992PFJPCB.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "7GYUVAA992PFJPCB",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "7GYUVAA992PFJPCB.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "7GYUVAA992PFJPCB.JRTCKXETXF.6YS6EN2CT7",
+                "description": "$0.10 per GB-month of consumed storage (Aurora PostgreSQL)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Mo",
+                "pricePerUnit": {
+                  "USD": "0.1000000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "KG668U3YXJQ6YH9Y",
+        "productFamily": "ServerlessV2",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storage": "Aurora IO Optimization Mode",
+          "engineCode": "21",
+          "databaseEngine": "Aurora PostgreSQL",
+          "usagetype": "Aurora:ServerlessV2IOOptimizedUsage",
+          "operation": "CreateDBInstance:0021",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "KG668U3YXJQ6YH9Y.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "KG668U3YXJQ6YH9Y",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "KG668U3YXJQ6YH9Y.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "KG668U3YXJQ6YH9Y.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.16 per Aurora Capacity Unit hour running Aurora PostgreSQL Serverless v2 IO-Optimized",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "ACU-Hr",
+                "pricePerUnit": {
+                  "USD": "0.1600000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "TP8SQX8FAU6UNY5B",
+        "productFamily": "ServerlessV2",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "engineCode": "16",
+          "databaseEngine": "Aurora MySQL",
+          "usagetype": "Aurora:ServerlessV2Usage",
+          "operation": "CreateDBInstance:0016",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "TP8SQX8FAU6UNY5B.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "TP8SQX8FAU6UNY5B",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "TP8SQX8FAU6UNY5B.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "TP8SQX8FAU6UNY5B.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.12 per Aurora Capacity Unit hour running Aurora MySQL Serverless v2",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "ACU-Hr",
+                "pricePerUnit": {
+                  "USD": "0.1200000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "VQVGDTDBW45RK4QW",
+        "productFamily": "Database Storage",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storageMedia": "SSD",
+          "volumeType": "IO Optimized-Aurora",
+          "minVolumeSize": "10 GB",
+          "maxVolumeSize": "128 TB",
+          "engineCode": "16",
+          "databaseEngine": "Aurora MySQL",
+          "deploymentOption": "Single-AZ",
+          "usagetype": "Aurora:IO-OptimizedStorageUsage",
+          "operation": "CreateDBInstance:0016",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "VQVGDTDBW45RK4QW.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "VQVGDTDBW45RK4QW",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "VQVGDTDBW45RK4QW.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "VQVGDTDBW45RK4QW.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.225 per GB-month of I/O-Optimized consumed storage (Aurora MySQL)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Mo",
+                "pricePerUnit": {
+                  "USD": "0.2250000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "Z9GWDW2S5DY72YDV",
+        "productFamily": "System Operation",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "engineCode": "0",
+          "databaseEngine": "Any",
+          "group": "Aurora I/O Operation",
+          "groupDescription": "Input/Output Operation",
+          "usagetype": "Aurora:StorageIOUsage",
+          "operation": "CreateDBInstance",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "Z9GWDW2S5DY72YDV.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "Z9GWDW2S5DY72YDV",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "Z9GWDW2S5DY72YDV.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "Z9GWDW2S5DY72YDV.JRTCKXETXF.6YS6EN2CT7",
+                "description": "$0.20 per 1 million I/O requests (Aurora)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "IOs",
+                "pricePerUnit": {
+                  "USD": "0.0000002000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "VCW4CP6PUZ5JN68T",
+        "productFamily": "Database Storage",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storageMedia": "SSD",
+          "volumeType": "General Purpose-Aurora",
+          "minVolumeSize": "10 GB",
+          "maxVolumeSize": "64 TB",
+          "engineCode": "0",
+          "databaseEngine": "Any",
+          "deploymentOption": "Single-AZ",
+          "usagetype": "Aurora:StorageUsage",
+          "operation": "CreateDBInstance",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "VCW4CP6PUZ5JN68T.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "VCW4CP6PUZ5JN68T",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "VCW4CP6PUZ5JN68T.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "VCW4CP6PUZ5JN68T.JRTCKXETXF.6YS6EN2CT7",
+                "description": "$0.10 per GB-month of consumed storage (Aurora)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Mo",
+                "pricePerUnit": {
+                  "USD": "0.1000000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "657RUPPEV3YQSGDA",
+        "productFamily": "Database Storage",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storageMedia": "SSD",
+          "volumeType": "IO Optimized-Aurora",
+          "minVolumeSize": "10 GB",
+          "maxVolumeSize": "128 TB",
+          "engineCode": "0",
+          "databaseEngine": "Any",
+          "deploymentOption": "Single-AZ",
+          "usagetype": "Aurora:IO-OptimizedStorageUsage",
+          "operation": "CreateDBInstance",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "657RUPPEV3YQSGDA.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "657RUPPEV3YQSGDA",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "657RUPPEV3YQSGDA.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "657RUPPEV3YQSGDA.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.225 per GB-month of I/O-Optimized consumed storage (Aurora MySQL)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Mo",
+                "pricePerUnit": {
+                  "USD": "0.2250000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "AVKW7ZJP8D72HNQC",
+        "productFamily": "ServerlessV2",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "engineCode": "21",
+          "databaseEngine": "Aurora PostgreSQL",
+          "usagetype": "Aurora:ServerlessV2Usage",
+          "operation": "CreateDBInstance:0021",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "AVKW7ZJP8D72HNQC.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "AVKW7ZJP8D72HNQC",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "AVKW7ZJP8D72HNQC.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "AVKW7ZJP8D72HNQC.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.12 per Aurora Capacity Unit hour running Aurora PostgreSQL Serverless v2",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "ACU-Hr",
+                "pricePerUnit": {
+                  "USD": "0.1200000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "MK5Y97VKQVCZA44G",
+        "productFamily": "ServerlessV2",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storage": "Aurora IO Optimization Mode",
+          "engineCode": "16",
+          "databaseEngine": "Aurora MySQL",
+          "usagetype": "Aurora:ServerlessV2IOOptimizedUsage",
+          "operation": "CreateDBInstance:0016",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "MK5Y97VKQVCZA44G.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "MK5Y97VKQVCZA44G",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "MK5Y97VKQVCZA44G.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "MK5Y97VKQVCZA44G.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.16 per Aurora Capacity Unit hour running Aurora MySQL Serverless v2 IO-Optimized",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "ACU-Hr",
+                "pricePerUnit": {
+                  "USD": "0.1600000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "7JDSZP38DMKT9B86",
+        "productFamily": "System Operation",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "engineCode": "21",
+          "databaseEngine": "Aurora PostgreSQL",
+          "group": "Aurora I/O Operation",
+          "groupDescription": "Input/Output Operation",
+          "usagetype": "Aurora:StorageIOUsage",
+          "operation": "CreateDBInstance:0021",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "7JDSZP38DMKT9B86.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "7JDSZP38DMKT9B86",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "7JDSZP38DMKT9B86.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "7JDSZP38DMKT9B86.JRTCKXETXF.6YS6EN2CT7",
+                "description": "$0.20 per 1 million I/O requests (Aurora PostgreSQL)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "IOs",
+                "pricePerUnit": {
+                  "USD": "0.0000002000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    },
+    {
+      "product": {
+        "sku": "5YXZF9S373QUR5VW",
+        "productFamily": "Database Storage",
+        "attributes": {
+          "servicecode": "AmazonRDS",
+          "location": "US East (N. Virginia)",
+          "locationType": "AWS Region",
+          "storageMedia": "SSD",
+          "volumeType": "IO Optimized-Aurora",
+          "minVolumeSize": "10 GB",
+          "maxVolumeSize": "128 TB",
+          "engineCode": "21",
+          "databaseEngine": "Aurora PostgreSQL",
+          "deploymentOption": "Single-AZ",
+          "usagetype": "Aurora:IO-OptimizedStorageUsage",
+          "operation": "CreateDBInstance:0021",
+          "regionCode": "us-east-1",
+          "servicename": "Amazon Relational Database Service"
+        }
+      },
+      "serviceCode": "AmazonRDS",
+      "publicationDate": "2026-11-12T22:34:41Z",
+      "terms": {
+        "OnDemand": {
+          "5YXZF9S373QUR5VW.JRTCKXETXF": {
+            "offerTermCode": "JRTCKXETXF",
+            "sku": "5YXZF9S373QUR5VW",
+            "effectiveDate": "2026-11-01T00:00:00Z",
+            "priceDimensions": {
+              "5YXZF9S373QUR5VW.JRTCKXETXF.6YS6EN2CT7": {
+                "rateCode": "5YXZF9S373QUR5VW.JRTCKXETXF.6YS6EN2CT7",
+                "description": "USD 0.225 per GB-month of I/O-Optimized consumed storage (Aurora PostgreSQL)",
+                "beginRange": "0",
+                "endRange": "Inf",
+                "unit": "GB-Mo",
+                "pricePerUnit": {
+                  "USD": "0.2250000000"
+                },
+                "appliesTo": []
+              }
+            },
+            "termAttributes": {}
+          }
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "service": "AmazonECS",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/us-east-1/index.json",
+      "publication_date": "2026-11-11T23:46:23Z"
+    },
+    {
+      "service": "AWSLambda",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/current/us-east-1/index.json",
+      "publication_date": "2026-11-11T22:30:04Z"
+    },
+    {
+      "service": "AmazonRDS",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-1/index.json",
+      "publication_date": "2026-11-12T22:34:41Z"
+    }
+  ]
+}

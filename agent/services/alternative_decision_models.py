@@ -3,7 +3,7 @@
 Pure data module: no AWS calls, no I/O, and no dependency on the usage-evidence modules. Decision
 results are deliberately a DIFFERENT structure from the usage-evidence output
 (``usage_evidence`` / ``metrics_collector``): evidence describes what was observed, a decision
-describes what the (future) decision engine concluded from it. Nothing here changes evidence output.
+describes what the decision engine concluded from it. Nothing here changes evidence output.
 
 VERDICTS (exactly four)
     compatible        the alternative can run the source workload (rules satisfied)

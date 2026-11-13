@@ -239,3 +239,14 @@ See the AWS security issue reporting guidance for the upstream project.
 
 MIT-0. See [LICENSE](LICENSE).
 
+# Validated alternative-service recommendations
+
+The Strands agent includes an on-demand threshold → usage evidence → compatibility
+→ equivalent-workload pricing → recommendation workflow. See
+[setup, workload inputs, cost assumptions and live-test commands](docs/recommendations.md).
+The CLI runs the same workflow without a web API:
+
+```powershell
+.\.venv\Scripts\python.exe -m agent.recommend --config agent/config.yaml --request examples/recommendation-request.json
+```
+

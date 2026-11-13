@@ -1,0 +1,107 @@
+{
+  "alternative_id": "ec2-short-event-driven-to-lambda",
+  "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+  "regions": [
+    "us-east-1"
+  ],
+  "resource_id": "REPLACE_WITH_INSTANCE_ID",
+  "workload_inputs": [
+    {
+      "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+      "region": "us-east-1",
+      "resource_id": "REPLACE_WITH_INSTANCE_ID",
+      "workload_assessment": {
+        "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+        "region": "us-east-1",
+        "resource_id": "REPLACE_WITH_INSTANCE_ID",
+        "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+        "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+        "value": false
+      },
+      "evidence": {
+        "workload.event_driven": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null
+        },
+        "workload.lambda_invocation_type": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null
+        },
+        "workload.max_event_duration_seconds": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null
+        },
+        "workload.max_request_payload_mb": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null
+        },
+        "workload.max_response_payload_mb": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null
+        }
+      },
+      "pricing": {
+        "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+        "region": "us-east-1",
+        "resource_id": "REPLACE_WITH_INSTANCE_ID",
+        "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+        "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+        "value": null,
+        "currency": "USD",
+        "workload_equivalent": false,
+        "performance_assessed": false,
+        "overheads_assessed": false,
+        "commitments_assessed": false,
+        "retained_monthly_cost_usd": null,
+        "current_cost": {
+          "account_id": "REPLACE_WITH_CONFIGURED_ACCOUNT_ID",
+          "region": "us-east-1",
+          "resource_id": "REPLACE_WITH_INSTANCE_ID",
+          "observed_at": "REPLACE_WITH_VERIFIED_ISO_8601_UTC_TIME",
+          "source": "REPLACE_WITH_REAL_OWNER_STATEMENT_OR_MEASUREMENT_REFERENCE",
+          "value": null,
+          "attribution": "resource",
+          "currency": "USD",
+          "amount_usd": null,
+          "period_start": "REPLACE_WITH_OBSERVED_PERIOD_START_UTC",
+          "period_end_exclusive": "REPLACE_WITH_OBSERVED_PERIOD_EXCLUSIVE_END_UTC"
+        },
+        "monthly_invocations": null,
+        "lambda_memory_mb": null,
+        "lambda_billed_duration_ms": null,
+        "target_architecture": "x86_64",
+        "architecture_assessed": false,
+        "rates": {
+          "lambda_duration": {
+            "service_code": "AWSLambda",
+            "unit": "Lambda-GB-Second",
+            "filters": {
+              "group": "AWS-Lambda-Duration"
+            },
+            "account_prior_units": null
+          }
+        }
+      }
+    }
+  ]
+}

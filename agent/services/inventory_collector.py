@@ -216,6 +216,7 @@ class InventoryCollector:
         )
         arns = self._cap(env, sorted(arns))
         clusters: List[Dict[str, Any]] = []
+        fargate_presence_complete = True
         for i in range(0, len(arns), 100):
             try:
                 resp = ecs.describe_clusters(clusters=arns[i:i + 100], include=["STATISTICS"])
@@ -224,6 +225,7 @@ class InventoryCollector:
                 break
             for c in resp.get("clusters", []):
                 stats = {s.get("name", "").lower(): _to_int(s.get("value")) for s in c.get("statistics", [])}
+                fargate_presence_complete &= {"activefargateservicecount", "runningfargatetaskscount"}.issubset(stats)
                 clusters.append({
                     "cluster_name": c.get("clusterName"),
                     "cluster_arn": c.get("clusterArn"),
@@ -235,6 +237,7 @@ class InventoryCollector:
                     "running_fargate_tasks": stats.get("runningfargatetaskscount", 0),
                 })
         env["resources"] = clusters
+        env["fargate_presence_complete"] = fargate_presence_complete and len(clusters) == len(arns)
         env["count"] = len(clusters)
         ec2_ids: List[str] = []
         if include_container_instances:

@@ -609,3 +609,29 @@ Notes:
 - Enable CloudTrail logging in all accounts to audit cross-account access
 - Rotate credentials and review trust policies regularly
 - Consider VPC endpoints for Bedrock, Athena, and S3 to keep traffic off the public internet
+# Additional read permissions for validated recommendations
+
+The complete recommendation workflow reuses the existing inventory, CloudWatch
+and Cost Explorer permissions. Add these read actions to each inspected account's
+role when using the corresponding alternative. No write permissions are needed.
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "ec2:DescribeRouteTables",
+    "ec2:DescribeVpcEndpoints",
+    "rds:DescribeDBEngineVersions",
+    "rds:DescribeOrderableDBInstanceOptions",
+    "pricing:GetProducts"
+  ],
+  "Resource": "*"
+}
+```
+
+Route APIs verify NAT gateway-endpoint coverage. RDS APIs verify the exact Aurora
+engine/version in the inspected region. Pricing uses the `us-east-1` query endpoint
+and filters products for the workload's region. EC2 memory reads existing
+`CWAgent` metrics using the existing `cloudwatch:GetMetricData` permission; the
+workflow never installs an agent. Permission failures block affected positive
+recommendations and are included in the report. See [recommendation setup](recommendations.md).

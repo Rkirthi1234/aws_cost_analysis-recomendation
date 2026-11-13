@@ -17,6 +17,7 @@ ALLOWED_OPERATIONS: Dict[str, FrozenSet[str]] = {
         "describe_instance_types",
         "describe_nat_gateways",
         "describe_vpc_endpoints",
+        "describe_route_tables",
     }),
     "lambda": frozenset({"list_functions", "list_event_source_mappings"}),
     "ecs": frozenset({
@@ -25,10 +26,12 @@ ALLOWED_OPERATIONS: Dict[str, FrozenSet[str]] = {
         "list_container_instances",
         "describe_container_instances",
     }),
-    "rds": frozenset({"describe_db_instances", "describe_db_clusters"}),
+    "rds": frozenset({"describe_db_instances", "describe_db_clusters",
+                      "describe_db_engine_versions", "describe_orderable_db_instance_options"}),
     "cloudwatch": frozenset({"get_metric_data"}),
     # Cost Explorer: the Phase 1 high-cost screen only ever calls get_cost_and_usage.
     "ce": frozenset({"get_cost_and_usage"}),
+    "pricing": frozenset({"get_products"}),
 }
 
 # boto3 method -> IAM action, used for error hints and the permission report.
@@ -38,6 +41,7 @@ IAM_ACTIONS: Dict[str, Dict[str, str]] = {
         "describe_instance_types": "ec2:DescribeInstanceTypes",
         "describe_nat_gateways": "ec2:DescribeNatGateways",
         "describe_vpc_endpoints": "ec2:DescribeVpcEndpoints",
+        "describe_route_tables": "ec2:DescribeRouteTables",
     },
     "lambda": {
         "list_functions": "lambda:ListFunctions",
@@ -52,9 +56,12 @@ IAM_ACTIONS: Dict[str, Dict[str, str]] = {
     "rds": {
         "describe_db_instances": "rds:DescribeDBInstances",
         "describe_db_clusters": "rds:DescribeDBClusters",
+        "describe_db_engine_versions": "rds:DescribeDBEngineVersions",
+        "describe_orderable_db_instance_options": "rds:DescribeOrderableDBInstanceOptions",
     },
     "cloudwatch": {"get_metric_data": "cloudwatch:GetMetricData"},
     "ce": {"get_cost_and_usage": "ce:GetCostAndUsage"},
+    "pricing": {"get_products": "pricing:GetProducts"},
 }
 
 

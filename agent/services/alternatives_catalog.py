@@ -8,7 +8,7 @@ The catalog data lives in ``agent/service_alternatives.yaml``.
 TYPED DECISION DEFINITIONS (Step 38.3)
     Besides the descriptive ``required_evidence`` strings (unchanged: they are echoed in the usage evidence
     output) each approved entry carries machine-readable definitions. They are DATA ONLY: nothing here
-    evaluates a rule; the compatibility evaluator is a later step.
+    evaluates a rule; compatibility_evaluator executes the validated definitions.
 
     ``references``            source references: id, https URL, verification date
     ``evidence_requirements`` typed evidence keys (type, origin, source path or derivation, role)

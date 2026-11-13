@@ -208,6 +208,16 @@ def _initialize_agent():
             "continuing with the existing tools only"
         )
 
+    recommendations_registered = False
+    if alternatives_registered:
+        try:
+            from agent.tools.recommendation_tools import get_recommendation_tools
+            recommendation_tools = get_recommendation_tools(config, session_manager, account_registry)
+            tools.extend(recommendation_tools)
+            recommendations_registered = bool(recommendation_tools)
+        except Exception:
+            logger.exception("Recommendation tools could not be initialized")
+
     # Cost threshold alert tool: opt-in via threshold_detection.enabled (default: false), independent
     # of the alternatives flag. Same safeguards: the flag is checked before the optional module is
     # imported, and the import lives inside the try so a problem here can never prevent the existing
@@ -252,6 +262,7 @@ def _initialize_agent():
     system_prompt_text = get_system_prompt(
         include_alternatives=alternatives_registered,
         include_threshold_detection=threshold_registered,
+        include_recommendations=recommendations_registered,
     )
     logger.info(f"System prompt loaded: {len(system_prompt_text)} characters")
     

@@ -1,7 +1,7 @@
 """Per-series metric coverage (Step 38.5).
 
-Pure functions. No AWS calls, no I/O. They are NOT wired into the metrics collector in Step 38:
-existing collector output and the zero-filled metric values are unchanged.
+Pure functions. No AWS calls, no I/O. The metrics collector uses these functions
+before zero-filling and exposes raw coverage alongside its existing summaries.
 
 WHAT COVERAGE MEANS
     coverage = (raw datapoints actually returned) / (datapoints expected for the FULL window)

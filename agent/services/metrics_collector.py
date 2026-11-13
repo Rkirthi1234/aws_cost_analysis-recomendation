@@ -9,6 +9,7 @@ Hourly datapoints are requested for the preferred window (default 30 days);
 sufficiency is judged against the approved minimum (default 14 days).
 """
 import logging
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -17,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from botocore.exceptions import ClientError
 
 from agent.services.readonly_guard import ReadOnlyViolation
+from agent.services.metric_coverage import calculate_series_coverage
 from agent.services.usage_patterns import (
     PERIOD_SECONDS,
     MetricsWindow,
@@ -211,10 +213,18 @@ class MetricsCollector:
                 }
                 continue
             metrics: Dict[str, Any] = {}
+            coverage: Dict[str, Any] = {}
             primary_series: List[Point] = []
             peak_series: Optional[List[Point]] = None
             for ms in spec.specs:
-                series = build_series(raw.get((rid, ms.key), []), window_end=end, fill_zero=ms.fill_zero)
+                points = raw.get((rid, ms.key), [])
+                # Coverage counts raw, finite observations in this exact window, before zero filling.
+                observed = {t for t, v in points if start <= t < end
+                            and isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)}
+                coverage[ms.key] = calculate_series_coverage(
+                    len(observed), self._window.preferred_days, PERIOD_SECONDS
+                ).as_dict()
+                series = build_series(points, window_end=end, fill_zero=ms.fill_zero)
                 metrics[ms.key] = summarize(series)
                 if ms.key == spec.primary:
                     primary_series = series
@@ -223,6 +233,8 @@ class MetricsCollector:
             entry: Dict[str, Any] = {
                 "metrics_available": True,
                 "metrics": metrics,
+                "metric_coverage": coverage,
+                "collection_complete": not out["warnings"],
                 "usage_pattern": classify_pattern(
                     primary_series, spec.rule, self._window, self._thresholds, peak_series=peak_series
                 ),

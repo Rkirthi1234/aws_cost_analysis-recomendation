@@ -94,6 +94,27 @@ tools:
 alternatives:
   enabled: false
 
+# Complete recommendation tools also use alternatives.enabled. The original three
+# tools remain evidence-only. See docs/recommendations.md for scoped workload input.
+alternative_decisions:
+  min_coverage_pct: 80
+  ec2_to_fargate:
+    headroom_pct: 20
+    sizing_statistic: max
+  lambda_to_fargate:
+    min_monthly_invocations: null
+    min_average_concurrency: null
+    min_active_duty_cycle_pct: null
+  attestation:
+    max_age_days: 30
+  pricing:
+    hours_per_month: 730
+    currency: USD
+    min_monthly_savings_usd: null
+    min_savings_pct: null
+  cache:
+    ttl_seconds: 86400
+
 # =============================================================================
 # Cost Threshold Configuration (optional; disabled by default)
 # =============================================================================
