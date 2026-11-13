@@ -52,7 +52,8 @@ def test_rank_totals_group_ec2_costs_and_provide_analysis_handoff(tmp_path):
     assert len(result["highest_cost_services"][0]["cost_explorer_services"]) == 2
     assert result["analysis_id"].startswith("analysis-")
     assert source.calls == [("2026-11-01", "2026-11-13")]
-    assert len(result["services"]) == 3  # top_n never changes total/all-service coverage
+    assert "services" not in result
+    assert result["services_shown"] == 2
 
 
 def test_omitted_dates_default_to_month_to_date(tmp_path):
@@ -108,7 +109,7 @@ def test_highest_service_is_default_and_service_must_belong_to_analysis(tmp_path
 
 def test_unmapped_service_remains_visible_without_inventing_candidate(tmp_path):
     obj = workflow(tmp_path)
-    saved = obj.analyze()
+    saved = obj.analyze(top_n=1)  # S3 is outside the returned top one, but retained internally.
     result = obj.recommend(saved["analysis_id"], "s3")
     assert result["status"] == "no_supported_alternative"
     assert result["candidates"] == []
@@ -132,7 +133,7 @@ def test_credits_are_preserved_and_ties_are_deterministic(tmp_path):
                                       "units": {k: ["USD"] for k in ("Service A", "Service B", "Credit")}}
     out = workflow(tmp_path, source).analyze()
     assert out["total_cost_usd"] == 18
-    assert [r["service"] for r in out["services"]] == ["Service A", "Service B", "Credit"]
+    assert [r["service"] for r in out["highest_cost_services"]] == ["Service A", "Service B", "Credit"]
 
 
 def test_no_cost_data_does_not_generate_candidates(tmp_path):
@@ -198,5 +199,26 @@ def test_two_http_calls_use_real_workflow_with_fake_aws_and_persistent_snapshot(
             assert client.post("/recommendations", json={"analysis_id": "unknown"}).status_code == 404
             assert client.post("/recommendations", json={}).status_code == 422
             assert client.post("/cost-analysis", json={"top_n": 0}).status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_top_five_response_does_not_leak_all_twelve_services(tmp_path):
+    source = Mock()
+    costs = {f"Service {i:02}": Decimal(i) for i in range(12)}
+    source.service_costs.return_value = {"costs": costs, "units": {k: ["USD"] for k in costs}}
+    obj = workflow(tmp_path, source)
+    app.dependency_overrides[get_cost_workflow] = lambda: obj
+    try:
+        with TestClient(app) as client:
+            response = client.post("/cost-analysis", json={"top_n": 5})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["service_count"] == 12
+        assert body["services_shown"] == 5
+        assert len(body["highest_cost_services"]) == 5
+        assert "services" not in body
+        assert body["total_cost_usd"] == 66
+        assert [r["cost_usd"] for r in body["highest_cost_services"]] == [11, 10, 9, 8, 7]
     finally:
         app.dependency_overrides.clear()

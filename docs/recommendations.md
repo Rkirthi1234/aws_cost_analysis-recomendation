@@ -46,8 +46,11 @@ Expand an endpoint, click **Try it out**, edit the request body and click **Exec
 
 The end date is **exclusive**, so this reads November 1–12. Omit both dates for
 month-to-date; future end dates are rejected because this is actual spending, not
-a forecast. The response includes `analysis_id`, total cost, all `services`, and
-the `highest_cost_services` subset. EC2 Compute and EC2 - Other are grouped but
+a forecast. The response includes `analysis_id`, total cost, and only the requested
+`highest_cost_services` (up to `top_n`). There is no duplicate full `services` list.
+`service_count` is the total number found; `services_shown` is the number returned.
+The complete list stays in the private snapshot for subsequent service selection.
+EC2 Compute and EC2 - Other are grouped but
 their source breakdown is retained. Zero costs, credits and negative adjustments
 are preserved. All billed regions are included in Cost Explorer's payer-level
 totals; linked accounts may be included. Top-N does not restrict the overall total.

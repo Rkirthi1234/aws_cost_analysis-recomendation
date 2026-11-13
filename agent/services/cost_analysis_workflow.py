@@ -138,7 +138,10 @@ class CostAnalysisWorkflow:
                                "Credits and negative amounts are preserved in net spending totals."],
                   "aws_resources_changed": False}
         self.store.save(report, self._fingerprint(), self.now_fn().timestamp())
-        return report
+        # Keep all service rows in the private snapshot for later selection, but
+        # honor top_n in the public response without a duplicate full-service list.
+        return {**{k: v for k, v in report.items() if k != "services"},
+                "services_shown": len(report["highest_cost_services"])}
 
     def recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
         report = self.store.load(analysis_id, self._fingerprint(), self.now_fn().timestamp())
