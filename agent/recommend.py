@@ -22,7 +22,9 @@ def main():
     config = ConfigService(args.config)
     if not is_alternatives_enabled(config):
         parser.error("Set alternatives.enabled: true in the chosen configuration.")
-    with open(args.request, encoding="utf-8") as handle:
+    # Windows PowerShell Set-Content -Encoding utf8 may prepend a BOM.
+    # utf-8-sig accepts both BOM-prefixed and ordinary UTF-8 files.
+    with open(args.request, encoding="utf-8-sig") as handle:
         request = json.load(handle)
     if not isinstance(request, dict):
         parser.error("Request must be a JSON object.")
