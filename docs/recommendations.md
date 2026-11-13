@@ -55,8 +55,25 @@ pricing or the model; a new POST is required to refresh a result.
 
 The end date is **exclusive**, so this reads November 1–12. Omit both dates for
 month-to-date; future end dates are rejected because this is actual spending, not
-a forecast. The response includes `analysis_id`, total cost, and only the requested
-`top_services` (up to `top_n`), each with service name and cost. There is no duplicate full `services` list.
+a forecast. The response includes `analysis_id`, three clearly labelled totals,
+and only the requested `top_services` (up to `top_n`). Each service shows:
+
+- `cost_before_credits_usd` — cost with only Credit records excluded.
+- `credits_applied_usd` — actual signed credits (usually negative).
+- `net_cost_usd` — the amount after those credits.
+
+The report totals are `total_cost_before_credits_usd`,
+`total_credits_applied_usd` and `total_net_cost_usd`. **Ranking uses cost before
+credits**, so promotional credits do not hide expensive workloads. For example,
+EC2 cost of $0.0244 and credits of -$0.0244 are displayed separately, with net $0.
+This example is a reconciliation, not a forecast or a guaranteed amount for another period.
+
+The Cost Explorer query groups by SERVICE and RECORD_TYPE in one paginated query,
+using the same AmortizedCost metric. Refunds, discounts, Savings Plan negations,
+fees and other non-Credit records retain their actual signs in before-credit cost.
+It is not a reconstructed public list price or necessarily Usage-only spending.
+Adding credits back to before-credit cost must reconcile exactly to net cost.
+There is no duplicate full `services` list.
 `service_count` is the total number found; `services_shown` is the number returned.
 The complete list stays in the private snapshot for subsequent service selection.
 EC2 Compute and EC2 - Other are grouped but
@@ -103,11 +120,22 @@ pricing assumptions and other decision-relevant limitations remain visible.
 Full candidates, verdicts, sources and evaluated evidence are under `details` only
 when explicitly requested. No missing fact or saving is invented to shorten a report.
 
-`selected_period_cost_usd` is actual **service-level** spending in the saved period.
+Recommendations carry `selected_period_cost_before_credits_usd`,
+`selected_period_credits_applied_usd` and `selected_period_net_cost_usd` from the saved
+analysis, and default selection uses that analysis's before-credit ranking.
+These are actual **service-level** amounts for the selected period.
 It is never used as the monthly baseline for an individual resource. Monthly
 estimates still require the verified resource-level costs/workload inputs below.
 Fresh workload metrics have their own reported window; they are not claimed to
 describe an arbitrary historical billing period.
+
+GET does not rewrite old snapshots or invent a credit breakdown. A report created
+before this change retains its original ranking and returns null for unknown
+before-credit/credit amounts with `ranking_basis: net_cost_legacy`. Create a new
+POST `/cost-analysis` to obtain the breakdown and use its new ID for recommendations.
+Threshold/Strands cost tools keep their existing net-cost contracts; the new
+before-credit ranking applies to this date-based API flow. Before-credit savings
+opportunities are not a promise of reduced payable charges while credits cover usage.
 
 Cost analyses and recommendations persist locally in `.cost_analyses.sqlite3` for
 24 hours each (up to 1024 snapshots of each type), including across server restarts.

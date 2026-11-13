@@ -21,11 +21,12 @@ CATALOG = AlternativesCatalog.load()
 
 class Source:
     def __init__(self): self.calls = []
-    def service_costs(self, start, end):
+    def service_costs(self, start, end, *, include_credit_breakdown=False):
         self.calls.append((start, end))
         amounts = {"Amazon Elastic Compute Cloud - Compute": Decimal(100), "EC2 - Other": Decimal(20),
                    "Amazon Relational Database Service": Decimal(90), "Amazon Simple Storage Service": Decimal(15)}
-        return {"metric": "AmortizedCost", "costs": amounts, "units": {k: ["USD"] for k in amounts}, "warnings": []}
+        return {"metric": "AmortizedCost", "costs": amounts, "units": {k: ["USD"] for k in amounts}, "warnings": [],
+                "cost_breakdown_available": True, "costs_before_credits": amounts, "credits": {k: Decimal(0) for k in amounts}}
 
 
 def engine():
@@ -130,7 +131,10 @@ def test_failed_partial_mixed_currency_and_invalid_costs_are_not_saved(tmp_path,
 def test_credits_are_preserved_and_ties_are_deterministic(tmp_path):
     source = Mock()
     source.service_costs.return_value = {"costs": {"Service B": Decimal(10), "Service A": Decimal(10), "Credit": Decimal(-2)},
-                                      "units": {k: ["USD"] for k in ("Service A", "Service B", "Credit")}}
+                                      "units": {k: ["USD"] for k in ("Service A", "Service B", "Credit")},
+                                      "cost_breakdown_available": True,
+                                      "costs_before_credits": {"Service A": Decimal(10), "Service B": Decimal(10), "Credit": Decimal(0)},
+                                      "credits": {"Service A": Decimal(0), "Service B": Decimal(0), "Credit": Decimal(-2)}}
     out = workflow(tmp_path, source).analyze()
     assert out["total_cost_usd"] == 18
     assert [r["service"] for r in out["highest_cost_services"]] == ["Service A", "Service B", "Credit"]
@@ -207,7 +211,8 @@ def test_two_http_calls_use_real_workflow_with_fake_aws_and_persistent_snapshot(
 def test_top_five_response_does_not_leak_all_twelve_services(tmp_path):
     source = Mock()
     costs = {f"Service {i:02}": Decimal(i) for i in range(12)}
-    source.service_costs.return_value = {"costs": costs, "units": {k: ["USD"] for k in costs}}
+    source.service_costs.return_value = {"costs": costs, "units": {k: ["USD"] for k in costs},
+                                      "cost_breakdown_available": True, "costs_before_credits": costs, "credits": {k: Decimal(0) for k in costs}}
     obj = workflow(tmp_path, source)
     app.dependency_overrides[get_cost_workflow] = lambda: obj
     try:
@@ -219,7 +224,7 @@ def test_top_five_response_does_not_leak_all_twelve_services(tmp_path):
         assert body["services_shown"] == 5
         assert len(body["top_services"]) == 5
         assert "services" not in body
-        assert body["total_cost_usd"] == 66
-        assert [r["cost_usd"] for r in body["top_services"]] == [11, 10, 9, 8, 7]
+        assert body["total_net_cost_usd"] == 66
+        assert [r["cost_before_credits_usd"] for r in body["top_services"]] == [11, 10, 9, 8, 7]
     finally:
         app.dependency_overrides.clear()

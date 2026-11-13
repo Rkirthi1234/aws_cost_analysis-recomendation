@@ -162,7 +162,7 @@ def health():
 
 @app.post("/cost-analysis", tags=["Main workflow"], summary="2. Create cost analysis")
 def cost_analysis(request: CostAnalysisRequest, workflow: Workflow, include_details: DetailFlag = False):
-    """Read actual costs, save the complete analysis, and return its ID and top N services."""
+    """Rank actual costs before credits; show credits and net costs separately and save the report."""
     return _respond(workflow.analyze, request, renderer=lambda r: cost_view(r, include_details))
 
 

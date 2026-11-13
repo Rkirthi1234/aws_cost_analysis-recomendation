@@ -3,10 +3,20 @@
 
 def cost_view(report, include_details=False):
     rows = report.get("highest_cost_services", [])[:report.get("top_n", 5)]
-    result = {k: report[k] for k in ("analysis_id", "status", "period", "currency", "total_cost_usd", "service_count", "top_n")}
-    result.update(services_shown=len(rows), top_services=[{"service": r["service"], "cost_usd": r["cost_usd"]} for r in rows],
+    result = {k: report[k] for k in ("analysis_id", "status", "period", "currency", "service_count", "top_n")}
+    result.update(
+        ranking_basis=report.get("ranking_basis", "net_cost_legacy"),
+        total_cost_before_credits_usd=report.get("total_cost_before_credits_usd"),
+        total_credits_applied_usd=report.get("total_credits_applied_usd"),
+        total_net_cost_usd=report.get("total_net_cost_usd", report["total_cost_usd"]),
+        services_shown=len(rows), top_services=[{"service": r["service"],
+            "cost_before_credits_usd": r.get("cost_before_credits_usd"),
+            "credits_applied_usd": r.get("credits_applied_usd"),
+            "net_cost_usd": r.get("net_cost_usd", r["cost_usd"])} for r in rows],
                   limitations=["Actual spending for the selected dates; end date is exclusive and recent billing data may lag.",
-                               "Total includes billing adjustments; EC2 includes Compute and EC2 - Other."])
+                               "Before-credit cost retains other adjustments; EC2 includes Compute and EC2 - Other."])
+    if not report.get("cost_breakdown_available"):
+        result["limitations"].append("This older snapshot has net costs only. Create a new cost analysis for before-credit ranking and credit amounts.")
     if include_details:
         result["details"] = {**{k: v for k, v in report.items() if k != "services"}, "services_shown": len(rows)}
     return result
@@ -45,6 +55,10 @@ def _priced(item):
 def recommendation_view(report, include_details=False):
     status = report["status"]
     result = {k: report[k] for k in ("recommendation_id", "analysis_id", "created_at", "service", "period", "selected_period_cost_usd") if k in report}
+    if "selected_period_cost_before_credits_usd" in report:
+        result.pop("selected_period_cost_usd", None)
+        result.update({k: report[k] for k in ("ranking_basis", "selected_period_cost_before_credits_usd",
+                                             "selected_period_credits_applied_usd", "selected_period_net_cost_usd")})
     result.update(status=status, currency="USD", recommendation=None, aws_resources_changed=False)
     candidates = [c for c in report.get("candidates", []) if c["status"] != "no_resources_found"
                   or c.get("details", {}).get("errors") or c.get("details", {}).get("status") == "partial"]
@@ -109,8 +123,10 @@ def recommendation_view(report, include_details=False):
         result["limitations"] = limitations
     if assumptions:
         result["assumptions"] = list(dict.fromkeys(assumptions))
-    if "selected_period_cost_usd" in result:
+    if "selected_period_cost_usd" in result or "selected_period_net_cost_usd" in result:
         result["cost_basis"] = "Selected-period service spending and estimated monthly resource costs cover different scopes; target usage is checked only in the inspected regions."
+        if report.get("ranking_basis") == "cost_before_credits":
+            result["cost_basis"] += " Before-credit ranking identifies workload cost, not immediate cash savings while credits cover charges."
     if include_details:
         result["details"] = report
     return result

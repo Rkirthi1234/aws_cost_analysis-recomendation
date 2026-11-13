@@ -129,7 +129,7 @@ class CostAnalysisWorkflow:
         if datetime.fromisoformat(end_date).date() > today:
             raise ValueError("end_date cannot be in the future; this endpoint reads actual costs, not a forecast.")
         source = self.cost_source or HighCostServiceIdentifier(ReadOnlySessionManager(self.engine.sm), self.registry, self.catalog)
-        result = source.service_costs(start_date, end_date)
+        result = source.service_costs(start_date, end_date, include_credit_breakdown=True)
         if result.get("error"):
             code = result.get("code") or result.get("exception_type") or "CostReadFailed"
             raise WorkflowError("CostReadFailed", f"Cost Explorer could not be read ({code}). Check AWS authentication and read permissions.", 502)
@@ -140,34 +140,56 @@ class CostAnalysisWorkflow:
             if result.get("units", {}).get(ce_name) != ["USD"]:
                 raise WorkflowError("UnsupportedCurrency", "All cost amounts must be USD; no currency conversion or mixed-unit sum is performed.", 502)
             amount = cost_amount(raw)
+            if (result.get("cost_breakdown_available") is not True
+                    or ce_name not in result.get("costs_before_credits", {}) or ce_name not in result.get("credits", {})):
+                raise WorkflowError("CreditBreakdownMissing", "A verified service/record-type breakdown is required; no analysis was saved.", 502)
+            before = cost_amount(result["costs_before_credits"][ce_name])
+            credit = cost_amount(result["credits"][ce_name])
+            if before + credit != amount:
+                raise WorkflowError("InconsistentCostData", "Before-credit cost plus credits does not match net cost; no analysis was saved.", 502)
             key = self.catalog.resolve_service(ce_name)
             group = key or "ce_service:" + ce_name
             if group not in totals:
                 totals[group] = {"service_key": key, "service": self.catalog.services[key].display_name if key else ce_name,
-                                 "amount": Decimal(0), "cost_explorer_services": []}
+                                 "amount": Decimal(0), "before": Decimal(0), "credits": Decimal(0), "cost_explorer_services": []}
             row = totals[group]
             row["amount"] += amount
-            row["cost_explorer_services"].append({"service": ce_name, "cost_usd": float(amount), "cost_usd_exact": str(amount)})
-        ranked = sorted(totals.values(), key=lambda r: (-r["amount"], r["service"]))
+            row["before"] += before
+            row["credits"] += credit
+            row["cost_explorer_services"].append({"service": ce_name, "cost_usd": float(amount), "cost_usd_exact": str(amount),
+                "cost_before_credits_usd": float(before), "cost_before_credits_usd_exact": str(before),
+                "credits_applied_usd": float(credit), "credits_applied_usd_exact": str(credit), "net_cost_usd": float(amount),
+                "record_type_costs": {k: str(v) for k, v in result.get("record_type_costs", {}).get(ce_name, {}).items()}})
+        ranked = sorted(totals.values(), key=lambda r: (-r["before"], r["service"]))
         services = []
         for rank, row in enumerate(ranked, 1):
             candidates = [e.id for e in self.catalog.approved_entries() if row["service_key"] in e.source_services]
             services.append({"rank": rank, "service_key": row["service_key"], "service": row["service"],
                              "cost_usd": float(row["amount"]), "cost_usd_exact": str(row["amount"]),
+                             "cost_before_credits_usd": float(row["before"]), "cost_before_credits_usd_exact": str(row["before"]),
+                             "credits_applied_usd": float(row["credits"]), "credits_applied_usd_exact": str(row["credits"]),
+                             "net_cost_usd": float(row["amount"]),
                              "alternative_available": bool(candidates), "alternative_ids": candidates,
                              "cost_explorer_services": row["cost_explorer_services"]})
         total = sum((r["amount"] for r in ranked), Decimal(0))
+        total_before = sum((r["before"] for r in ranked), Decimal(0))
+        total_credits = sum((r["credits"] for r in ranked), Decimal(0))
         payer = self.registry.get_payer_account()
         report = {"analysis_id": "analysis-" + uuid.uuid4().hex, "status": "evaluated" if services else "no_cost_data",
                   "period": {"start_date": start_date, "end_date_exclusive": end_date},
                   "created_at": self.now_fn().isoformat(), "currency": "USD", "metric": result.get("metric", "AmortizedCost"),
                   "total_cost_usd": float(total), "total_cost_usd_exact": str(total),
+                  "ranking_basis": "cost_before_credits", "cost_breakdown_available": True,
+                  "total_cost_before_credits_usd": float(total_before), "total_cost_before_credits_usd_exact": str(total_before),
+                  "total_credits_applied_usd": float(total_credits), "total_credits_applied_usd_exact": str(total_credits),
+                  "total_net_cost_usd": float(total),
                   "service_count": len(services), "top_n": top_n, "highest_cost_services": services[:top_n], "services": services,
                   "billing_scope": {"payer_account_id": payer.account_id, "regions": "all billed regions",
                                     "account_scope": "payer-level Cost Explorer totals; may include linked accounts"},
                   "warnings": ["End date is exclusive. Cost Explorer data can lag; these are observed costs, not forecasts.",
                                "EC2 includes Compute and EC2 - Other; its total is not an individual instance cost.",
                                "A catalog mapping is a candidate, not proof of compatibility or savings.",
+                               "Ranking excludes Credit records; other adjustments remain in before-credit cost, not a list-price estimate.",
                                "Credits and negative amounts are preserved in net spending totals."],
                   "aws_resources_changed": False}
         self.store.save(report, self._fingerprint(), self.now_fn().timestamp())
@@ -208,6 +230,11 @@ class CostAnalysisWorkflow:
                   "warnings": ["Selected-period service spending is not used as an individual resource's monthly baseline.",
                                "Fresh workload evidence uses its own metric window, which can differ from the billing period.",
                                "Do not add savings for competing replacements of the same workload."]}
+        if report.get("cost_breakdown_available"):
+            header.update(ranking_basis=report["ranking_basis"],
+                          selected_period_cost_before_credits_usd=selected["cost_before_credits_usd"],
+                          selected_period_credits_applied_usd=selected["credits_applied_usd"],
+                          selected_period_net_cost_usd=selected["net_cost_usd"])
         if not selected["alternative_ids"]:
             return {**header, "status": "no_supported_alternative", "candidates": [], "recommendation": None,
                     "reason": "No approved source-service mapping exists in the current catalog."}

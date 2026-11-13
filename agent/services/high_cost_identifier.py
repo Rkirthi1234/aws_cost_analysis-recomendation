@@ -167,12 +167,17 @@ class HighCostServiceIdentifier:
             ),
         }
 
-    def service_costs(self, start_date: str, end_date: str) -> Dict[str, Any]:
+    def service_costs(self, start_date: str, end_date: str, *, include_credit_breakdown: bool = False) -> Dict[str, Any]:
         """Total cost per Cost Explorer SERVICE name for the period (internal building block).
 
         Uses the same Cost Explorer query path as ``identify`` (same payer account, MONTHLY
         granularity, metric and exclusive end date), grouped by SERVICE only. Amounts of several
         monthly buckets are summed per service. Nothing is filtered, ranked or excluded here.
+
+        With include_credit_breakdown, group by SERVICE and RECORD_TYPE in one
+        request. Return signed credits and before-credit costs alongside net totals.
+        Before-credit costs retain other record types (including refunds/discounts);
+        they are not list-price estimates or necessarily Usage-only charges.
 
         Returns ``{"metric", "costs", "units", "warnings"}`` where ``costs`` maps the Cost Explorer
         service name to a ``Decimal`` (NOT JSON-serializable: callers convert) and ``units`` maps
@@ -185,7 +190,9 @@ class HighCostServiceIdentifier:
 
         warnings: List[str] = []
         try:
-            rows = self._fetch(start_date, end_date, ["SERVICE"], None, warnings)
+            groups = ["SERVICE", "RECORD_TYPE"] if include_credit_breakdown else ["SERVICE"]
+            rows = (self._fetch(start_date, end_date, groups, None, warnings, strict=True)
+                    if include_credit_breakdown else self._fetch(start_date, end_date, groups, None, warnings))
         except ClientError as e:
             return self._client_error(e, "get_cost_and_usage")
         except Exception as e:  # unexpected: never let the agent tool crash
@@ -195,17 +202,38 @@ class HighCostServiceIdentifier:
 
         costs: Dict[str, Decimal] = {}
         units: Dict[str, set] = {}
+        credits: Dict[str, Decimal] = {}
+        records: Dict[str, Dict[str, Decimal]] = {}
         for keys, amount, unit in rows:
-            if len(keys) != 1:
+            if len(keys) != (2 if include_credit_breakdown else 1):
+                if include_credit_breakdown:
+                    warnings.append("Incomplete service/record-type grouping; cost breakdown is unavailable.")
                 continue
             costs[keys[0]] = costs.get(keys[0], Decimal(0)) + amount
             units.setdefault(keys[0], set()).add(unit)
-        return {
+            if include_credit_breakdown:
+                record_type = keys[1]
+                if not isinstance(record_type, str) or not record_type.strip():
+                    warnings.append("A cost row has no record type; cost breakdown is incomplete.")
+                    continue
+                per_service = records.setdefault(keys[0], {})
+                per_service[record_type] = per_service.get(record_type, Decimal(0)) + amount
+                if record_type.strip().casefold() == "credit":
+                    credits[keys[0]] = credits.get(keys[0], Decimal(0)) + amount
+        result = {
             "metric": self._metric,
             "costs": costs,
             "units": {service: sorted(found) for service, found in units.items()},
             "warnings": warnings,
         }
+        if include_credit_breakdown:
+            result.update(
+                cost_breakdown_available=True,
+                credits={s: credits.get(s, Decimal(0)) for s in costs},
+                costs_before_credits={s: amount - credits.get(s, Decimal(0)) for s, amount in costs.items()},
+                record_type_costs=records,
+            )
+        return result
 
     # ---------------------------------------------------------------- internals
     def _build_candidates(
@@ -313,6 +341,7 @@ class HighCostServiceIdentifier:
         group_by: List[str],
         flt: Optional[dict],
         warnings: List[str],
+        strict: bool = False,
     ) -> List[Tuple[Tuple[str, ...], Decimal, str]]:
         """Read-only Cost Explorer query with NextPageToken pagination."""
         params: Dict[str, Any] = {
@@ -334,10 +363,16 @@ class HighCostServiceIdentifier:
             for period in resp.get("ResultsByTime", []):
                 for group in period.get("Groups", []):
                     metric = group.get("Metrics", {}).get(self._metric, {})
+                    if strict and ("Amount" not in metric or "Unit" not in metric):
+                        warnings.append("Missing amount or unit in Cost Explorer result; cost data is incomplete.")
+                        continue
                     try:
                         amount = Decimal(str(metric.get("Amount", "0")))
                     except InvalidOperation:
                         warnings.append(f"Skipped unparseable amount for {group.get('Keys')}")
+                        continue
+                    if strict and not amount.is_finite():
+                        warnings.append("Non-finite amount in Cost Explorer result; cost data is incomplete.")
                         continue
                     rows.append((tuple(group.get("Keys", [])), amount, metric.get("Unit", "USD")))
             token = resp.get("NextPageToken")

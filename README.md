@@ -255,6 +255,9 @@ $env:AWS_PROFILE = "cost-analyzer"
 Open **http://127.0.0.1:8000/docs**. First run POST `/cost-analysis` with your
 date range and `top_n`. Then copy its `analysis_id` into POST `/recommendations`
 and select a returned service (or omit service to use the highest-cost one).
+Cost ranking uses cost before credits; credit amounts and net costs are shown
+separately. Run a new analysis after updating to get this breakdown; existing
+saved reports keep their original billing snapshot.
 Use **Try it out** and **Execute** for each request. No threshold is required.
 Both POST routes save results and return IDs. Use GET `/cost-analysis/{analysis_id}`
 and GET `/recommendations/{recommendation_id}` to reopen them without new AWS calls.
