@@ -7,7 +7,59 @@ same service. There is no migration, AWS write, schedule, email or SNS delivery.
 The report itself is the on-demand notification. Live AWS validation remains a
 separate deployment check; offline tests use fake clients only.
 
-## Enable and run
+## Test through FastAPI (browser interface)
+
+FastAPI runs locally and calls the same read-only AWS recommendation service as
+the CLI. You do not need to deploy it to AWS to test your AWS account.
+Keep your working `agent/config.yaml` and existing AWS CLI profile.
+
+From the project root in PowerShell:
+
+```powershell
+git pull --ff-only origin recomendation-added
+.\.venv\Scripts\python.exe -m pip install fastapi uvicorn
+$env:AWS_PROFILE = "cost-analyzer"
+.\.venv\Scripts\python.exe -m uvicorn agent.api:app --host 127.0.0.1 --port 8000
+```
+
+Leave that terminal running. Open **http://127.0.0.1:8000/docs** in your browser.
+Expand an endpoint, click **Try it out**, edit the request body and click **Execute**.
+
+| Endpoint | Purpose |
+| --- | --- |
+| GET `/health` | Checks the API server, without calling AWS |
+| GET `/alternatives` | Lists all five supported candidate mappings and their IDs |
+| POST `/recommendations` | Checks actual costs against thresholds, then evaluates candidates for crossed services |
+| POST `/alternatives/evaluate` | Evaluates one candidate even when spending is below the threshold |
+
+For your first threshold test, send:
+
+```json
+{"regions": ["us-east-1"], "workload_inputs": []}
+```
+
+To repeat an EC2-to-Lambda evidence check, send this to `/alternatives/evaluate`:
+
+```json
+{
+  "alternative_id": "ec2-short-event-driven-to-lambda",
+  "regions": ["us-east-1"],
+  "workload_inputs": []
+}
+```
+
+Other candidates use the IDs from GET `/alternatives`. The first request may
+correctly return below-threshold spending; the second may correctly return
+`needs_information`. FastAPI changes the interface, not the evidence requirements.
+Use verified workload inputs below for complete compatibility and pricing.
+
+The API reads configuration from `agent/config.yaml` by default. For another
+local path set `COST_ANALYZER_CONFIG` before starting Uvicorn. HTTP requests cannot
+select a configuration path or submit AWS credentials. Configuration is loaded
+fresh per request. This interface is intended for your local loopback test;
+external hosting/access controls are a separate deployment task.
+
+## Enable and run the existing CLI
 
 Keep your private `agent/config.yaml` and AWS authentication on your machine.
 For a single-account local test using an existing AWS CLI profile, replace the
@@ -91,7 +143,8 @@ The Strands tools are `analyze_cost_recommendations` (threshold workflow) and
 `evaluate_service_alternative` (explicit alternative). They register when
 `alternatives.enabled` is true. The original evidence and threshold tools keep
 their existing contracts. An earlier evidence-only prompt does not override the
-new recommendation-tool instructions. No FastAPI server is required or added.
+new recommendation-tool instructions. The CLI and FastAPI interface call the same
+recommendation service; neither starts the Bedrock agent runtime for these tests.
 
 ## Workload inputs
 

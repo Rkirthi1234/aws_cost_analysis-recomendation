@@ -244,7 +244,17 @@ MIT-0. See [LICENSE](LICENSE).
 The Strands agent includes an on-demand threshold → usage evidence → compatibility
 → equivalent-workload pricing → recommendation workflow. See
 [setup, workload inputs, cost assumptions and live-test commands](docs/recommendations.md).
-The CLI runs the same workflow without a web API:
+For a browser-based live test, use the local FastAPI interface:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install fastapi uvicorn
+$env:AWS_PROFILE = "cost-analyzer"
+.\.venv\Scripts\python.exe -m uvicorn agent.api:app --host 127.0.0.1 --port 8000
+```
+
+Open **http://127.0.0.1:8000/docs**, select POST `/recommendations` or
+POST `/alternatives/evaluate`, then click **Try it out** and **Execute**.
+The API uses your existing `agent/config.yaml`. The CLI also remains available:
 
 ```powershell
 .\.venv\Scripts\python.exe -m agent.recommend --config agent/config.yaml --request examples/recommendation-request.json

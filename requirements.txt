@@ -21,6 +21,10 @@ mcp
 # Python package manager (for MCP servers)
 uv
 
+# Optional local HTTP interface and Swagger test page
+fastapi
+uvicorn
+
 # Testing
 hypothesis
 pytest
