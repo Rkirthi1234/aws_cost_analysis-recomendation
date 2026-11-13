@@ -93,3 +93,6 @@ IMPROVEMENT_PLAN.md
 
 # Staged for deletion (cleanup)
 _removed/
+
+# Private local cost-analysis snapshots
+.cost_analyses.sqlite3*

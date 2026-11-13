@@ -167,3 +167,10 @@ optional `resource_id`, independently of a threshold. Both accept dated,
 resource-scoped `workload_inputs`. They never invent missing application facts,
 prices or resource cost attribution and never modify AWS resources or send email/SNS.
 See [schemas, configuration and CLI usage](recommendations.md).
+
+The local FastAPI interface also supports a date-driven two-step flow:
+POST `/cost-analysis` returns ranked service costs and a saved `analysis_id`;
+POST `/recommendations` consumes that ID and a selected service to evaluate
+candidates without a cost threshold. The earlier HTTP threshold route is now
+POST `/threshold-recommendations`. The Strands tool and CLI threshold contracts
+are unchanged. See the same guide for request examples and analysis expiry.

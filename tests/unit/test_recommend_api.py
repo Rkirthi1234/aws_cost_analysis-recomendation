@@ -23,7 +23,7 @@ def test_swagger_and_health_work_without_config_or_aws_credentials():
         assert client.get("/docs").status_code == 200
         assert client.get("/health").json()["aws_access_checked"] is False
         spec = client.get("/openapi.json").json()
-        assert "/recommendations" in spec["paths"]
+        assert "/threshold-recommendations" in spec["paths"]
         assert "/alternatives/evaluate" in spec["paths"]
         result = client.get("/alternatives").json()
         assert len(result["alternatives"]) == 5
@@ -31,7 +31,7 @@ def test_swagger_and_health_work_without_config_or_aws_credentials():
 
 def test_default_request_checks_threshold_workflow(api):
     client, service = api
-    response = client.post("/recommendations", json={"regions": ["us-east-1"]})
+    response = client.post("/threshold-recommendations", json={"regions": ["us-east-1"]})
     assert response.status_code == 200
     assert response.json()["recommendations"] == 0
     service.run.assert_called_once_with(account_id=None, regions=["us-east-1"], workload_inputs=[], start_date=None, end_date=None)
@@ -50,15 +50,15 @@ def test_specific_alternative_bypasses_thresholds_and_preserves_missing_evidence
 
 def test_dates_are_serialized_for_existing_cost_service(api):
     client, service = api
-    assert client.post("/recommendations", json={"start_date": "2026-11-01", "end_date": "2026-11-13"}).status_code == 200
+    assert client.post("/threshold-recommendations", json={"start_date": "2026-11-01", "end_date": "2026-11-13"}).status_code == 200
     assert service.run.call_args.kwargs["start_date"] == "2026-11-01"
 
 
-@pytest.mark.parametrize("path,body", [("/recommendations", {"start_date": "2026-11-01"}),
-    ("/recommendations", {"start_date": "2026-11-13", "end_date": "2026-11-01"}),
-    ("/recommendations", {"account_id": "<PAYER_ACCOUNT_ID>"}),
-    ("/recommendations", {"regions": []}), ("/recommendations", {"regions": ["us-east-1"]*11}),
-    ("/recommendations", {"config_path": "another-account.yaml"}),
+@pytest.mark.parametrize("path,body", [("/threshold-recommendations", {"start_date": "2026-11-01"}),
+    ("/threshold-recommendations", {"start_date": "2026-11-13", "end_date": "2026-11-01"}),
+    ("/threshold-recommendations", {"account_id": "<PAYER_ACCOUNT_ID>"}),
+    ("/threshold-recommendations", {"regions": []}), ("/threshold-recommendations", {"regions": ["us-east-1"]*11}),
+    ("/threshold-recommendations", {"config_path": "another-account.yaml"}),
     ("/alternatives/evaluate", {})])
 def test_bad_inputs_are_rejected_before_service_calls(api, path, body):
     client, service = api
@@ -78,6 +78,6 @@ def test_unknown_or_unconfigured_resource_scope_becomes_http_422(api):
 def test_private_exception_details_are_not_returned_to_http_callers(api):
     client, service = api
     service.run.side_effect = RuntimeError("private upstream diagnostic")
-    response = client.post("/recommendations", json={})
+    response = client.post("/threshold-recommendations", json={})
     assert response.status_code == 500
     assert "private upstream" not in response.text

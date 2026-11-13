@@ -1,7 +1,7 @@
 # Alternative service recommendations
 
 The existing Strands agent now has a complete **on-demand, read-only** path:
-cost threshold → resource inventory and metrics → typed catalog rules → equivalent
+date-based cost ranking (or optional threshold) → resource inventory and metrics → typed catalog rules → equivalent
 workload cost comparison → recommendation report. The command-line runner uses the
 same service. There is no migration, AWS write, schedule, email or SNS delivery.
 The report itself is the on-demand notification. Live AWS validation remains a
@@ -29,10 +29,67 @@ Expand an endpoint, click **Try it out**, edit the request body and click **Exec
 | --- | --- |
 | GET `/health` | Checks the API server, without calling AWS |
 | GET `/alternatives` | Lists all five supported candidate mappings and their IDs |
-| POST `/recommendations` | Checks actual costs against thresholds, then evaluates candidates for crossed services |
+| POST `/cost-analysis` | Step 1: ranks actual service spending for selected dates and returns an `analysis_id` |
+| POST `/recommendations` | Step 2: uses that analysis to evaluate alternatives for a selected service, without a threshold |
+| POST `/threshold-recommendations` | Optional existing threshold-driven workflow (previously `/recommendations`) |
 | POST `/alternatives/evaluate` | Evaluates one candidate even when spending is below the threshold |
 
-For your first threshold test, send:
+**Step 1 — POST `/cost-analysis`:**
+
+```json
+{
+  "start_date": "2026-11-01",
+  "end_date": "2026-11-13",
+  "top_n": 5
+}
+```
+
+The end date is **exclusive**, so this reads November 1–12. Omit both dates for
+month-to-date; future end dates are rejected because this is actual spending, not
+a forecast. The response includes `analysis_id`, total cost, all `services`, and
+the `highest_cost_services` subset. EC2 Compute and EC2 - Other are grouped but
+their source breakdown is retained. Zero costs, credits and negative adjustments
+are preserved. All billed regions are included in Cost Explorer's payer-level
+totals; linked accounts may be included. Top-N does not restrict the overall total.
+Unsupported currencies, malformed amounts and incomplete pagination block a
+complete analysis instead of producing a misleading rank.
+
+**Step 2 — POST `/recommendations`:**
+
+```json
+{
+  "analysis_id": "PASTE_THE_ANALYSIS_ID_RETURNED_ABOVE",
+  "service": "Amazon EC2",
+  "regions": ["us-east-1"],
+  "workload_inputs": []
+}
+```
+
+Copy an actual returned `service` or its stable `service_key` (for example `ec2`,
+`rds`, `s3`). Omit `service` to choose the highest-cost service automatically.
+Each supported candidate is evaluated with fresh evidence; results include
+candidate status, missing information, full evidence/pricing details, and
+`preferred_recommendations` selected independently per resource. A single preferred
+result also appears in `recommendation`; multiple distinct workloads are not
+collapsed into one misleading replacement. No cost threshold is required.
+An unmapped service returns `no_supported_alternative`; nothing is invented for S3.
+
+`selected_period_cost_usd` is actual **service-level** spending in the saved period.
+It is never used as the monthly baseline for an individual resource. Monthly
+estimates still require the verified resource-level costs/workload inputs below.
+Fresh workload metrics have their own reported window; they are not claimed to
+describe an arbitrary historical billing period.
+
+Analysis snapshots persist locally in `.cost_analyses.sqlite3` for 24 hours (up to
+1024 snapshots), including across server restarts. The database is Git-ignored;
+credentials and submitted workload inputs are not saved in it. Missing/deleted IDs
+return HTTP 404, expired IDs HTTP 410, and changed account configuration HTTP 409.
+Run step 1 again to refresh. To change the local database location, set
+`COST_ANALYZER_ANALYSIS_DB` on the server; HTTP callers cannot select its path.
+Cost analysis does not require alternatives or thresholds to be enabled. Step 2
+still requires `alternatives.enabled: true`.
+
+For the separate optional **POST `/threshold-recommendations`** test, send:
 
 ```json
 {"regions": ["us-east-1"], "workload_inputs": []}
@@ -48,8 +105,8 @@ To repeat an EC2-to-Lambda evidence check, send this to `/alternatives/evaluate`
 }
 ```
 
-Other candidates use the IDs from GET `/alternatives`. The first request may
-correctly return below-threshold spending; the second may correctly return
+Other candidates use the IDs from GET `/alternatives`. The optional threshold request may
+correctly return below-threshold spending; an alternative evaluation may correctly return
 `needs_information`. FastAPI changes the interface, not the evidence requirements.
 Use verified workload inputs below for complete compatibility and pricing.
 

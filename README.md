@@ -252,8 +252,12 @@ $env:AWS_PROFILE = "cost-analyzer"
 .\.venv\Scripts\python.exe -m uvicorn agent.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open **http://127.0.0.1:8000/docs**, select POST `/recommendations` or
-POST `/alternatives/evaluate`, then click **Try it out** and **Execute**.
+Open **http://127.0.0.1:8000/docs**. First run POST `/cost-analysis` with your
+date range and `top_n`. Then copy its `analysis_id` into POST `/recommendations`
+and select a returned service (or omit service to use the highest-cost one).
+Use **Try it out** and **Execute** for each request. No threshold is required.
+The older threshold workflow is available at POST `/threshold-recommendations`;
+POST `/alternatives/evaluate` still directly evaluates a catalog candidate.
 The API uses your existing `agent/config.yaml`. The CLI also remains available:
 
 ```powershell
