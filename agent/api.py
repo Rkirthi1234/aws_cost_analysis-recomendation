@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AWS Cost and Alternative Service Recommendations",
     version="1.1.0",
+    openapi_tags=[
+        {"name": "Main workflow", "description": "Run step 1 first, then copy its analysis_id into step 2."},
+        {"name": "Supporting checks", "description": "Optional server, catalog and individual candidate checks."},
+        {"name": "Optional threshold workflow"},
+    ],
     description=("Use Try it out to read your AWS cost and workload data. "
                  "First POST /cost-analysis with dates, then POST /recommendations with its analysis_id. "
                  "POST /threshold-recommendations retains the optional threshold workflow. "
@@ -136,31 +141,31 @@ def _respond(method, request):
         raise HTTPException(status_code=500, detail="Recommendation execution failed. Check the server log; no AWS changes were made.") from None
 
 
-@app.get("/health", tags=["Server"])
+@app.get("/health", tags=["Supporting checks"])
 def health():
     """Check the API server only. This makes no AWS calls and does not verify AWS access."""
     return {"status": "ok", "aws_access_checked": False, "aws_resources_changed": False}
 
 
-@app.get("/alternatives", tags=["AWS recommendations"])
+@app.get("/alternatives", tags=["Supporting checks"])
 def list_alternatives():
     """List all five configured candidate mappings without contacting AWS."""
     return {"alternatives": [{"alternative_id": e.id, "source": e.source_name, "alternative": e.alternative_name}
                              for e in AlternativesCatalog.load().approved_entries()]}
 
 
-@app.post("/recommendations", tags=["AWS recommendations"])
+@app.post("/cost-analysis", tags=["Main workflow"], summary="1. Analyze costs by date")
+def cost_analysis(request: CostAnalysisRequest, workflow: Workflow):
+    """Step 1: read actual costs for your dates, rank services and return an analysis_id."""
+    return _respond(workflow.analyze, request)
+
+
+@app.post("/recommendations", tags=["Main workflow"], summary="2. Find service alternatives")
 def recommendations(request: RecommendationRequest, workflow: Workflow):
     """Step 2: evaluate candidates for a selected service from a saved cost analysis; no threshold required."""
     if not is_alternatives_enabled(workflow.engine.config):
         raise HTTPException(status_code=503, detail="Set alternatives.enabled: true in the local configuration.")
     return _respond(workflow.recommend, request)
-
-
-@app.post("/cost-analysis", tags=["AWS recommendations"])
-def cost_analysis(request: CostAnalysisRequest, workflow: Workflow):
-    """Step 1: read actual costs for your dates, rank services and return an analysis_id."""
-    return _respond(workflow.analyze, request)
 
 
 @app.post("/threshold-recommendations", tags=["Optional threshold workflow"])
@@ -169,7 +174,7 @@ def threshold_recommendations(request: ThresholdRequest, service: Service):
     return _respond(service.run, request)
 
 
-@app.post("/alternatives/evaluate", tags=["AWS recommendations"])
+@app.post("/alternatives/evaluate", tags=["Supporting checks"])
 def evaluate_alternative(request: AlternativeRequest, service: Service):
     """Inspect live workload evidence for an alternative without requiring a threshold breach."""
     return _respond(service.evaluate, request)
