@@ -25,14 +25,23 @@ $env:AWS_PROFILE = "cost-analyzer"
 Leave that terminal running. Open **http://127.0.0.1:8000/docs** in your browser.
 Expand an endpoint, click **Try it out**, edit the request body and click **Execute**.
 
-| Endpoint | Purpose |
-| --- | --- |
-| GET `/health` | Checks the API server, without calling AWS |
-| GET `/alternatives` | Lists all five supported candidate mappings and their IDs |
-| POST `/cost-analysis` | Step 1: ranks actual service spending for selected dates and returns an `analysis_id` |
-| POST `/recommendations` | Step 2: uses that analysis to evaluate alternatives for a selected service, without a threshold |
-| POST `/threshold-recommendations` | Optional existing threshold-driven workflow (previously `/recommendations`) |
-| POST `/alternatives/evaluate` | Evaluates one candidate even when spending is below the threshold |
+| Order | Endpoint | Purpose |
+| --- | --- | --- |
+| 1 | GET `/health` | Checks the API server only, without calling AWS |
+| 2 | POST `/cost-analysis` | Runs cost analysis and returns `analysis_id` with a concise report |
+| 3 | GET `/cost-analysis/{analysis_id}` | Views the saved cost report without new AWS calls |
+| 4 | POST `/recommendations` | Evaluates and saves alternatives; returns `recommendation_id` |
+| 5 | GET `/recommendations/{recommendation_id}` | Views that saved recommendation without reevaluation |
+
+GET `/alternatives` is listed separately under **Supported alternatives**. The
+older POST `/threshold-recommendations` and POST `/alternatives/evaluate` remain
+functional for developer use but are hidden from Swagger/OpenAPI.
+
+The four main POST/GET report routes use concise manager-facing responses by
+default. Add the query parameter **`?include_details=true`** to inspect full evaluated
+evidence and settings. This only changes the view, not the analysis or its ID.
+GET routes do not create AWS sessions or call Cost Explorer, inventory, metrics,
+pricing or the model; a new POST is required to refresh a result.
 
 **Step 1 — POST `/cost-analysis`:**
 
@@ -47,11 +56,11 @@ Expand an endpoint, click **Try it out**, edit the request body and click **Exec
 The end date is **exclusive**, so this reads November 1–12. Omit both dates for
 month-to-date; future end dates are rejected because this is actual spending, not
 a forecast. The response includes `analysis_id`, total cost, and only the requested
-`highest_cost_services` (up to `top_n`). There is no duplicate full `services` list.
+`top_services` (up to `top_n`), each with service name and cost. There is no duplicate full `services` list.
 `service_count` is the total number found; `services_shown` is the number returned.
 The complete list stays in the private snapshot for subsequent service selection.
 EC2 Compute and EC2 - Other are grouped but
-their source breakdown is retained. Zero costs, credits and negative adjustments
+their source breakdown is available through `include_details=true`. Zero costs, credits and negative adjustments
 are preserved. All billed regions are included in Cost Explorer's payer-level
 totals; linked accounts may be included. Top-N does not restrict the overall total.
 Unsupported currencies, malformed amounts and incomplete pagination block a
@@ -68,14 +77,31 @@ complete analysis instead of producing a misleading rank.
 }
 ```
 
-Copy an actual returned `service` or its stable `service_key` (for example `ec2`,
-`rds`, `s3`). Omit `service` to choose the highest-cost service automatically.
-Each supported candidate is evaluated with fresh evidence; results include
-candidate status, missing information, full evidence/pricing details, and
-`preferred_recommendations` selected independently per resource. A single preferred
-result also appears in `recommendation`; multiple distinct workloads are not
-collapsed into one misleading replacement. No cost threshold is required.
+Copy a returned service name; stable keys such as `ec2`, `rds`, `s3` are also accepted.
+Omit `service` to choose the highest-cost service automatically. Each supported
+candidate is evaluated with fresh evidence. The concise result includes the status,
+reason, next action, and either required information or verified financial estimates.
+A single preferred result appears in `recommendation`; multiple independent
+resource results use `recommendations`. No cost threshold is required.
 An unmapped service returns `no_supported_alternative`; nothing is invented for S3.
+
+The POST response now includes **`recommendation_id`**. Copy it into GET
+`/recommendations/{recommendation_id}` to see the same saved result. Copy the
+cost POST's `analysis_id` into GET `/cost-analysis/{analysis_id}` in the same way.
+Neither GET needs a request body. For example:
+
+```text
+GET /cost-analysis/analysis-YOUR_SAVED_ID
+GET /recommendations/recommendation-YOUR_SAVED_ID
+GET /recommendations/recommendation-YOUR_SAVED_ID?include_details=true
+```
+
+Default recommendation reports omit no-resource candidates, repeated settings,
+raw rule codes and repeated evidence. Missing workload facts are deduplicated into
+plain-language `required_information`. Collection failures, incomplete scope,
+pricing assumptions and other decision-relevant limitations remain visible.
+Full candidates, verdicts, sources and evaluated evidence are under `details` only
+when explicitly requested. No missing fact or saving is invented to shorten a report.
 
 `selected_period_cost_usd` is actual **service-level** spending in the saved period.
 It is never used as the monthly baseline for an individual resource. Monthly
@@ -83,11 +109,15 @@ estimates still require the verified resource-level costs/workload inputs below.
 Fresh workload metrics have their own reported window; they are not claimed to
 describe an arbitrary historical billing period.
 
-Analysis snapshots persist locally in `.cost_analyses.sqlite3` for 24 hours (up to
-1024 snapshots), including across server restarts. The database is Git-ignored;
-credentials and submitted workload inputs are not saved in it. Missing/deleted IDs
+Cost analyses and recommendations persist locally in `.cost_analyses.sqlite3` for
+24 hours each (up to 1024 snapshots of each type), including across server restarts.
+The database is Git-ignored. Recommendation snapshots contain sanitized evaluated
+evidence; raw request bodies and AWS credentials are not saved. Each recommendation
+POST creates a distinct ID; GET reads the historical result without rechecking AWS.
+A recommendation can be retrieved for its own retention period even if its parent
+analysis expires. Missing/deleted IDs
 return HTTP 404, expired IDs HTTP 410, and changed account configuration HTTP 409.
-Run step 1 again to refresh. To change the local database location, set
+Run the corresponding POST again to refresh. To change the local database location, set
 `COST_ANALYZER_ANALYSIS_DB` on the server; HTTP callers cannot select its path.
 Cost analysis does not require alternatives or thresholds to be enabled. Step 2
 still requires `alternatives.enabled: true`.

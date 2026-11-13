@@ -23,8 +23,11 @@ def test_swagger_and_health_work_without_config_or_aws_credentials():
         assert client.get("/docs").status_code == 200
         assert client.get("/health").json()["aws_access_checked"] is False
         spec = client.get("/openapi.json").json()
-        assert "/threshold-recommendations" in spec["paths"]
-        assert "/alternatives/evaluate" in spec["paths"]
+        assert "/threshold-recommendations" not in spec["paths"]
+        assert "/alternatives/evaluate" not in spec["paths"]
+        assert [p for p, methods in spec["paths"].items() if any(
+            op.get("tags") == ["Main workflow"] for op in methods.values())] == [
+                "/health", "/cost-analysis", "/cost-analysis/{analysis_id}", "/recommendations", "/recommendations/{recommendation_id}"]
         result = client.get("/alternatives").json()
         assert len(result["alternatives"]) == 5
 

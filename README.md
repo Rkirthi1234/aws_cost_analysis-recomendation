@@ -256,8 +256,12 @@ Open **http://127.0.0.1:8000/docs**. First run POST `/cost-analysis` with your
 date range and `top_n`. Then copy its `analysis_id` into POST `/recommendations`
 and select a returned service (or omit service to use the highest-cost one).
 Use **Try it out** and **Execute** for each request. No threshold is required.
-The older threshold workflow is available at POST `/threshold-recommendations`;
-POST `/alternatives/evaluate` still directly evaluates a catalog candidate.
+Both POST routes save results and return IDs. Use GET `/cost-analysis/{analysis_id}`
+and GET `/recommendations/{recommendation_id}` to reopen them without new AWS calls.
+Reports are concise by default; `?include_details=true` enables technical evidence.
+GET `/health` comes first; GET `/alternatives` remains in an optional catalog section.
+The older threshold and direct-evaluation POST routes remain available but are hidden
+from the main Swagger page.
 The API uses your existing `agent/config.yaml`. The CLI also remains available:
 
 ```powershell

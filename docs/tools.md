@@ -170,7 +170,12 @@ See [schemas, configuration and CLI usage](recommendations.md).
 
 The local FastAPI interface also supports a date-driven two-step flow:
 POST `/cost-analysis` returns ranked service costs and a saved `analysis_id`;
-POST `/recommendations` consumes that ID and a selected service to evaluate
-candidates without a cost threshold. The earlier HTTP threshold route is now
-POST `/threshold-recommendations`. The Strands tool and CLI threshold contracts
+POST `/recommendations` consumes that ID and a selected service to evaluate and
+save candidates without a cost threshold, returning `recommendation_id`.
+GET `/cost-analysis/{analysis_id}` and GET `/recommendations/{recommendation_id}`
+retrieve saved snapshots without AWS calls. Default reports are concise; use
+`include_details=true` for technical evidence. Health and the four report routes
+form the main Swagger workflow. GET `/alternatives` is optional; direct evaluation
+and the earlier HTTP threshold route `/threshold-recommendations` are hidden
+from Swagger but remain callable. The Strands tool and CLI threshold contracts
 are unchanged. See the same guide for request examples and analysis expiry.

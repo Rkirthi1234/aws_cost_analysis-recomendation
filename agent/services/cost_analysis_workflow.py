@@ -34,28 +34,63 @@ class AnalysisStore:
         try:
             with connection:
                 connection.execute("CREATE TABLE IF NOT EXISTS cost_analyses (id TEXT PRIMARY KEY, created REAL NOT NULL, payload TEXT NOT NULL)")
+                connection.execute("CREATE TABLE IF NOT EXISTS recommendations (id TEXT PRIMARY KEY, created REAL NOT NULL, payload TEXT NOT NULL)")
                 yield connection
         finally:
             connection.close()
 
     def save(self, report, fingerprint, now):
+        self._save("cost_analyses", report["analysis_id"], report, fingerprint, now)
+
+    def save_recommendation(self, report, fingerprint, now):
+        self._save("recommendations", report["recommendation_id"], report, fingerprint, now)
+
+    def _save(self, table, record_id, report, fingerprint, now):
+        assert table in ("cost_analyses", "recommendations")
         payload = json.dumps({"fingerprint": fingerprint, "report": report})
         with self._connect() as con:
-            con.execute("DELETE FROM cost_analyses WHERE created <= ?", (now - self.ttl,))
-            con.execute("INSERT INTO cost_analyses VALUES (?, ?, ?)", (report["analysis_id"], now, payload))
-            con.execute("DELETE FROM cost_analyses WHERE rowid NOT IN (SELECT rowid FROM cost_analyses ORDER BY rowid DESC LIMIT ?)", (self.max_entries,))
+            con.execute(f"DELETE FROM {table} WHERE created <= ?", (now - self.ttl,))
+            con.execute(f"INSERT INTO {table} VALUES (?, ?, ?)", (record_id, now, payload))
+            con.execute(f"DELETE FROM {table} WHERE rowid NOT IN (SELECT rowid FROM {table} ORDER BY rowid DESC LIMIT ?)", (self.max_entries,))
 
     def load(self, analysis_id, fingerprint, now):
+        return self._load("cost_analyses", analysis_id, fingerprint, now)
+
+    def load_recommendation(self, recommendation_id, fingerprint, now):
+        return self._load("recommendations", recommendation_id, fingerprint, now)
+
+    def _load(self, table, record_id, fingerprint, now):
+        assert table in ("cost_analyses", "recommendations")
+        kind = "Analysis" if table == "cost_analyses" else "Recommendation"
         with self._connect() as con:
-            row = con.execute("SELECT created, payload FROM cost_analyses WHERE id = ?", (analysis_id,)).fetchone()
+            row = con.execute(f"SELECT created, payload FROM {table} WHERE id = ?", (record_id,)).fetchone()
         if row is None:
-            raise WorkflowError("AnalysisNotFound", "Analysis not found. Run POST /cost-analysis first.", 404)
+            raise WorkflowError(kind + "NotFound", f"{kind} not found. Run its POST endpoint first.", 404)
         if now - row[0] >= self.ttl:
-            raise WorkflowError("AnalysisExpired", "This analysis has expired. Run POST /cost-analysis again.", 410)
+            raise WorkflowError(kind + "Expired", f"This {kind.lower()} has expired. Run its POST endpoint again.", 410)
         payload = json.loads(row[1])
         if payload["fingerprint"] != fingerprint:
-            raise WorkflowError("AnalysisScopeChanged", "The configured accounts changed. Create a new cost analysis.", 409)
+            raise WorkflowError(kind + "ScopeChanged", "The configured accounts changed. Create a new report.", 409)
         return payload["report"]
+
+
+def account_fingerprint(registry):
+    accounts = sorted((a.account_id, a.account_type, a.region, a.role_arn,
+                       getattr(a, "use_current_credentials", False)) for a in registry.entries.values())
+    return hashlib.sha256(json.dumps(accounts).encode()).hexdigest()
+
+
+class SavedReportReader:
+    """Read saved reports without creating AWS sessions, clients or collectors."""
+    def __init__(self, store, registry, now_fn=None):
+        self.store, self.registry = store, registry
+        self.now_fn = now_fn or (lambda: datetime.now(timezone.utc))
+
+    def analysis(self, analysis_id):
+        return self.store.load(analysis_id, account_fingerprint(self.registry), self.now_fn().timestamp())
+
+    def recommendation(self, recommendation_id):
+        return self.store.load_recommendation(recommendation_id, account_fingerprint(self.registry), self.now_fn().timestamp())
 
 
 def cost_amount(value):
@@ -78,9 +113,7 @@ class CostAnalysisWorkflow:
         self.cost_source = cost_source
 
     def _fingerprint(self):
-        accounts = sorted((a.account_id, a.account_type, a.region, a.role_arn,
-                           getattr(a, "use_current_credentials", False)) for a in self.registry.entries.values())
-        return hashlib.sha256(json.dumps(accounts).encode()).hexdigest()
+        return account_fingerprint(self.registry)
 
     def analyze(self, start_date=None, end_date=None, top_n=5):
         if (start_date is None) != (end_date is None):
@@ -144,6 +177,16 @@ class CostAnalysisWorkflow:
                 "services_shown": len(report["highest_cost_services"])}
 
     def recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
+        result = self._recommend(analysis_id, service, account_id, regions, workload_inputs, resource_id)
+        result.update(recommendation_id="recommendation-" + uuid.uuid4().hex, created_at=self.now_fn().isoformat())
+        # Save evaluated evidence, never the raw request/credentials. Use the same
+        # redaction applied to API/tool responses before writing the snapshot.
+        from agent.tools.alternatives_tools import _dump
+        result = json.loads(_dump(result))
+        self.store.save_recommendation(result, self._fingerprint(), self.now_fn().timestamp())
+        return result
+
+    def _recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
         report = self.store.load(analysis_id, self._fingerprint(), self.now_fn().timestamp())
         if not report["services"]:
             return {"analysis_id": analysis_id, "status": "no_cost_data", "candidates": [], "recommendation": None}

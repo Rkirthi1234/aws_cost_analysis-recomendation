@@ -195,7 +195,8 @@ def test_two_http_calls_use_real_workflow_with_fake_aws_and_persistent_snapshot(
             assert first.status_code == 200, first.text
             second = client.post("/recommendations", json={"analysis_id": first.json()["analysis_id"], "service": "Amazon EC2", "regions": ["us-east-1"]})
             assert second.status_code == 200, second.text
-            assert len(second.json()["candidates"]) == 3
+            assert second.json()["recommendation_id"].startswith("recommendation-")
+            assert "candidates" not in second.json()
             assert client.post("/recommendations", json={"analysis_id": "unknown"}).status_code == 404
             assert client.post("/recommendations", json={}).status_code == 422
             assert client.post("/cost-analysis", json={"top_n": 0}).status_code == 422
@@ -216,9 +217,9 @@ def test_top_five_response_does_not_leak_all_twelve_services(tmp_path):
         body = response.json()
         assert body["service_count"] == 12
         assert body["services_shown"] == 5
-        assert len(body["highest_cost_services"]) == 5
+        assert len(body["top_services"]) == 5
         assert "services" not in body
         assert body["total_cost_usd"] == 66
-        assert [r["cost_usd"] for r in body["highest_cost_services"]] == [11, 10, 9, 8, 7]
+        assert [r["cost_usd"] for r in body["top_services"]] == [11, 10, 9, 8, 7]
     finally:
         app.dependency_overrides.clear()

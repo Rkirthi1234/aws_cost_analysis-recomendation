@@ -10,12 +10,13 @@ import os
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent.services.alternatives_catalog import AlternativesCatalog
 from agent.services.config_service import ConfigService
-from agent.services.cost_analysis_workflow import AnalysisStore, CostAnalysisWorkflow, WorkflowError
+from agent.services.cost_analysis_workflow import AnalysisStore, CostAnalysisWorkflow, SavedReportReader, WorkflowError
+from agent.services.report_views import cost_view, recommendation_view
 from agent.services.recommendation_service import RecommendationService
 from agent.services.session_manager import SessionManager
 from agent.tools.alternatives_tools import _dump, is_alternatives_enabled
@@ -24,16 +25,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="AWS Cost and Alternative Service Recommendations",
-    version="1.1.0",
+    version="1.2.0",
     openapi_tags=[
-        {"name": "Main workflow", "description": "Run step 1 first, then copy its analysis_id into step 2."},
-        {"name": "Supporting checks", "description": "Optional server, catalog and individual candidate checks."},
-        {"name": "Optional threshold workflow"},
+        {"name": "Main workflow", "description": "Check health, create and view cost analysis, then create and view recommendations."},
+        {"name": "Supported alternatives", "description": "Optional list of configured candidate mappings."},
     ],
     description=("Use Try it out to read your AWS cost and workload data. "
                  "First POST /cost-analysis with dates, then POST /recommendations with its analysis_id. "
-                 "POST /threshold-recommendations retains the optional threshold workflow. "
-                 "POST /alternatives/evaluate tests an alternative even below the threshold. "
+                 "Use the GET routes to retrieve saved results without running AWS analysis again. "
+                 "Reports are concise by default; include_details=true shows technical evidence. "
                  "Missing evidence is reported, never guessed. No AWS resources are changed."),
 )
 
@@ -121,13 +121,26 @@ def get_cost_workflow() -> CostAnalysisWorkflow:
     return CostAnalysisWorkflow(_build_service(), AnalysisStore(os.environ.get("COST_ANALYZER_ANALYSIS_DB", ".cost_analyses.sqlite3")))
 
 
+def get_saved_reports() -> SavedReportReader:
+    try:
+        config = ConfigService(os.environ.get("COST_ANALYZER_CONFIG", "agent/config.yaml"))
+        return SavedReportReader(AnalysisStore(os.environ.get("COST_ANALYZER_ANALYSIS_DB", ".cost_analyses.sqlite3")), config.account_registry)
+    except Exception:
+        logger.exception("Saved-report configuration could not be loaded")
+        raise HTTPException(status_code=503, detail="Check the local report configuration.") from None
+
+
 Service = Annotated[RecommendationService, Depends(get_service)]
 Workflow = Annotated[CostAnalysisWorkflow, Depends(get_cost_workflow)]
+SavedReports = Annotated[SavedReportReader, Depends(get_saved_reports)]
+DetailFlag = Annotated[bool, Query(description="Show technical evidence and settings. Leave false for a concise report.")]
 
 
-def _respond(method, request):
+def _respond(method, request=None, renderer=None, **params):
     try:
-        result = method(**request.model_dump(mode="json"))
+        result = method(**(request.model_dump(mode="json") if request is not None else params))
+        if renderer:
+            result = renderer(result)
         # Preserve evidence and sanitize sensitive strings using the existing tool contract.
         return json.loads(_dump(result))
     except WorkflowError as exc:
@@ -141,40 +154,52 @@ def _respond(method, request):
         raise HTTPException(status_code=500, detail="Recommendation execution failed. Check the server log; no AWS changes were made.") from None
 
 
-@app.get("/health", tags=["Supporting checks"])
+@app.get("/health", tags=["Main workflow"], summary="1. Check the API server")
 def health():
     """Check the API server only. This makes no AWS calls and does not verify AWS access."""
     return {"status": "ok", "aws_access_checked": False, "aws_resources_changed": False}
 
 
-@app.get("/alternatives", tags=["Supporting checks"])
+@app.post("/cost-analysis", tags=["Main workflow"], summary="2. Create cost analysis")
+def cost_analysis(request: CostAnalysisRequest, workflow: Workflow, include_details: DetailFlag = False):
+    """Read actual costs, save the complete analysis, and return its ID and top N services."""
+    return _respond(workflow.analyze, request, renderer=lambda r: cost_view(r, include_details))
+
+
+@app.get("/cost-analysis/{analysis_id}", tags=["Main workflow"], summary="3. View saved cost analysis")
+def saved_cost_analysis(analysis_id: str, saved: SavedReports, include_details: DetailFlag = False):
+    """Retrieve a saved cost report. No AWS sessions, API calls or cost refresh are performed."""
+    return _respond(saved.analysis, analysis_id=analysis_id, renderer=lambda r: cost_view(r, include_details))
+
+
+@app.post("/recommendations", tags=["Main workflow"], summary="4. Create recommendations")
+def recommendations(request: RecommendationRequest, workflow: Workflow, include_details: DetailFlag = False):
+    """Evaluate and save alternatives using an analysis ID; return a recommendation ID."""
+    if not is_alternatives_enabled(workflow.engine.config):
+        raise HTTPException(status_code=503, detail="Set alternatives.enabled: true in the local configuration.")
+    return _respond(workflow.recommend, request, renderer=lambda r: recommendation_view(r, include_details))
+
+
+@app.get("/recommendations/{recommendation_id}", tags=["Main workflow"], summary="5. View saved recommendations")
+def saved_recommendation(recommendation_id: str, saved: SavedReports, include_details: DetailFlag = False):
+    """Retrieve the saved recommendation, without reevaluating AWS resources or pricing."""
+    return _respond(saved.recommendation, recommendation_id=recommendation_id, renderer=lambda r: recommendation_view(r, include_details))
+
+
+@app.get("/alternatives", tags=["Supported alternatives"])
 def list_alternatives():
     """List all five configured candidate mappings without contacting AWS."""
     return {"alternatives": [{"alternative_id": e.id, "source": e.source_name, "alternative": e.alternative_name}
                              for e in AlternativesCatalog.load().approved_entries()]}
 
 
-@app.post("/cost-analysis", tags=["Main workflow"], summary="1. Analyze costs by date")
-def cost_analysis(request: CostAnalysisRequest, workflow: Workflow):
-    """Step 1: read actual costs for your dates, rank services and return an analysis_id."""
-    return _respond(workflow.analyze, request)
-
-
-@app.post("/recommendations", tags=["Main workflow"], summary="2. Find service alternatives")
-def recommendations(request: RecommendationRequest, workflow: Workflow):
-    """Step 2: evaluate candidates for a selected service from a saved cost analysis; no threshold required."""
-    if not is_alternatives_enabled(workflow.engine.config):
-        raise HTTPException(status_code=503, detail="Set alternatives.enabled: true in the local configuration.")
-    return _respond(workflow.recommend, request)
-
-
-@app.post("/threshold-recommendations", tags=["Optional threshold workflow"])
+@app.post("/threshold-recommendations", include_in_schema=False)
 def threshold_recommendations(request: ThresholdRequest, service: Service):
     """Check live AWS service spending; evaluate alternatives only when thresholds are crossed."""
     return _respond(service.run, request)
 
 
-@app.post("/alternatives/evaluate", tags=["Supporting checks"])
+@app.post("/alternatives/evaluate", include_in_schema=False)
 def evaluate_alternative(request: AlternativeRequest, service: Service):
     """Inspect live workload evidence for an alternative without requiring a threshold breach."""
     return _respond(service.evaluate, request)
