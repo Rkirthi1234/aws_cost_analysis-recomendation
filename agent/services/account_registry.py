@@ -1,5 +1,6 @@
 """Account registry for cross-account AWS access configuration."""
 from dataclasses import dataclass, field
+import re
 from typing import Dict, List, Optional
 
 
@@ -24,6 +25,7 @@ class AccountEntry:
     services: Optional[List[str]] = field(default_factory=list)
     athena_cur: Optional[AthenaConfig] = None
     athena_vpc_flowlogs: Optional[AthenaConfig] = None
+    use_current_credentials: bool = False
 
 
 class AccountRegistry:
@@ -55,6 +57,14 @@ class AccountRegistry:
                 )
 
             account_id = str(entry_dict["account_id"])
+            direct = entry_dict.get("use_current_credentials", False)
+            if not isinstance(direct, bool):
+                raise ValueError("use_current_credentials must be true or false")
+            if direct:
+                if not re.fullmatch(r"[0-9]{12}", account_id):
+                    raise ValueError("use_current_credentials requires a real 12-digit account_id")
+                if entry_dict.get("role_arn") is not None or entry_dict.get("external_id") is not None:
+                    raise ValueError("use_current_credentials cannot be combined with role_arn or external_id")
 
             if account_id in seen_ids:
                 raise ValueError(
@@ -84,6 +94,7 @@ class AccountRegistry:
                 services=entry_dict.get("services", []),
                 athena_cur=athena_cur,
                 athena_vpc_flowlogs=athena_vpc_flowlogs,
+                use_current_credentials=direct,
             )
             self.entries[account_id] = account_entry
 
@@ -98,7 +109,7 @@ class AccountRegistry:
 
         # Validate payer has role_arn
         payer_id, payer_entry = payer_entries[0]
-        if payer_entry.role_arn is None:
+        if payer_entry.role_arn is None and not payer_entry.use_current_credentials:
             # Find the original index for the error message
             payer_idx = list(self.entries.keys()).index(payer_id)
             raise ValueError(

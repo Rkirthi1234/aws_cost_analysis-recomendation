@@ -10,6 +10,22 @@ separate deployment check; offline tests use fake clients only.
 ## Enable and run
 
 Keep your private `agent/config.yaml` and AWS authentication on your machine.
+For a single-account local test using an existing AWS CLI profile, replace the
+example `accounts` section with the following, using your actual 12-digit ID:
+
+```yaml
+accounts:
+  - account_id: "YOUR_12_DIGIT_ACCOUNT_ID"
+    account_type: payer
+    region: us-east-1
+    use_current_credentials: true
+```
+
+Omit `role_arn` and `external_id` in this explicit mode. Set `AWS_PROFILE` to your
+existing profile. The session verifies `sts:GetCallerIdentity` matches the account
+before reading account data. This does not grant permissions or create/modify IAM
+roles. Cross-account configurations continue to use their existing role ARNs.
+
 Merge these sections into your actual configuration (do not replace the accounts,
 model or other existing configuration):
 

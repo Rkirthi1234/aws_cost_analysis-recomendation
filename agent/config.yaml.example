@@ -16,7 +16,9 @@ aws:
 # Account Configuration (REQUIRED — update with your account details)
 # =============================================================================
 #
-# - Exactly one payer account is required (must have role_arn)
+# - Exactly one payer account is required (role_arn, or explicit same-account mode)
+# - For a local CLI profile in the same account, omit role_arn/external_id and set
+#   use_current_credentials: true. Identity is checked against the real account_id.
 # - Member accounts may omit role_arn when the agent runs in the same account
 # - Athena config can appear on any account type (payer or member)
 # - The table field is optional — when omitted, the agent auto-discovers tables

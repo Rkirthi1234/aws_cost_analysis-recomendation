@@ -56,6 +56,18 @@ class SessionManager:
         """
         entry = self._registry.get_account(account_id)
 
+        if entry.use_current_credentials:
+            # Explicit single-account mode. Verify identity on the SAME session used
+            # for subsequent API clients; never silently read a different account.
+            session = boto3.Session(region_name=entry.region or self._default_region)
+            try:
+                identity = session.client("sts").get_caller_identity()
+            except Exception as exc:
+                raise RuntimeError("Current-credentials identity verification failed; check AWS_PROFILE and its login.") from None
+            if identity.get("Account") != entry.account_id:
+                raise RuntimeError("Current AWS credentials do not match the configured account_id; no account data was read.")
+            return session
+
         # No role_arn → return default session (no STS call)
         if entry.role_arn is None:
             return boto3.Session(
