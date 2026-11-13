@@ -65,7 +65,6 @@ threatmodel/
 .coverage
 htmlcov/
 .tox/
-tests/
 
 # Streamlit
 .streamlit/secrets.toml

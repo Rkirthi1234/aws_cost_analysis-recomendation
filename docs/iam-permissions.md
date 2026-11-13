@@ -481,6 +481,103 @@ Remove the `Condition` block if you are not using external IDs.
 
 ---
 
+## 5. Optional: Read-only permissions for the alternatives evidence tools
+
+Only needed when `alternatives.enabled: true` (see [Configuration Guide](configuration.md#7-alternative-service-evidence-tools-alternatives)). Inventory and CloudWatch collection runs inside each configured account through that account's role, so add **Statement A** below to **every role whose account should be inspected** (the payer role and any member roles). Cost Explorer is different: it is only ever called through the payer account, so **Statement B** goes on the **payer role only** and must not be added to member roles. Accounts whose role lacks an action are not skipped silently: the tool reports the missing action under `missing_permissions`.
+
+Together, the two statements below are exactly the output of `required_iam_actions()` in `agent/services/readonly_guard.py`: Statement A is every service except `ce`, and Statement B is the `ce` entry. That module is the source of truth: it is also the allowlist the code enforces, so the tools cannot call any other operation even if a role grants more. To regenerate the list after a code change:
+
+```bash
+python -c "import json; from agent.services.readonly_guard import required_iam_actions as r; print(json.dumps(r(), indent=2))"
+```
+
+**Statement A: every inspected role (payer and member)**
+
+```json
+{
+  "Sid": "AlternativesEvidenceReadOnly",
+  "Effect": "Allow",
+  "Action": [
+    "ec2:DescribeInstanceTypes",
+    "ec2:DescribeInstances",
+    "ec2:DescribeNatGateways",
+    "ec2:DescribeVpcEndpoints",
+    "lambda:ListEventSourceMappings",
+    "lambda:ListFunctions",
+    "ecs:DescribeClusters",
+    "ecs:DescribeContainerInstances",
+    "ecs:ListClusters",
+    "ecs:ListContainerInstances",
+    "rds:DescribeDBClusters",
+    "rds:DescribeDBInstances",
+    "cloudwatch:GetMetricData"
+  ],
+  "Resource": "*"
+}
+```
+
+**Statement B: payer role only (do not add to member roles)**
+
+```json
+{
+  "Sid": "AlternativesCostExplorerReadOnly",
+  "Effect": "Allow",
+  "Action": [
+    "ce:GetCostAndUsage"
+  ],
+  "Resource": "*"
+}
+```
+
+The payer permissions policy in section 3 (`CostExplorer` statement) already includes `ce:GetCostAndUsage`. If the payer role uses that policy, Statement B is already satisfied and does not need to be added again.
+
+Notes:
+
+- All actions are read-only `Describe*`, `List*` or `Get*` calls. No write permission is required or used.
+- `ce:GetCostAndUsage` is used only by `identify_high_cost_services`, and the code calls it only through the payer account. Member roles never need it, so keep it out of their policies.
+- Statement A covers inventory (EC2, Lambda, ECS, RDS) and CloudWatch metrics, which run in each inspected account. Statement B covers the cost screening step, which runs in the payer account.
+- This document is guidance only; nothing here changes any IAM policy automatically.
+
+---
+
+## 6. Proposed (NOT ACTIVE): AWS Pricing API permissions for alternative pricing comparison
+
+> **Status: documentation only. Pending approval.** Nothing in this section is granted, required or enforced today. The alternatives code does not call the Pricing API yet: `agent/services/readonly_guard.py` has no `pricing` entry, so `ReadOnlySessionManager` would refuse any Pricing call. No IAM role or policy is changed by this document, and no permission should be added to AWS until the approval below is given.
+
+The pricing comparison step (existing service versus proposed alternative, same workload) needs to read public list prices from the AWS Price List Query API. Required actions, all read-only:
+
+| Action | Used for |
+|--------|----------|
+| `pricing:GetProducts` | Retrieve price list entries for a service code (for example `AmazonEC2`, `AWSLambda`, `AmazonECS`, `AmazonRDS`) filtered by attributes such as region and instance type |
+| `pricing:GetAttributeValues` | Discover valid filter values (for example the location and usage type strings) so filters are not guessed |
+| `pricing:DescribeServices` | Confirm a service code and list its filterable attributes |
+
+```json
+{
+  "Sid": "AlternativesPricingReadOnly",
+  "Effect": "Allow",
+  "Action": [
+    "pricing:GetProducts",
+    "pricing:GetAttributeValues",
+    "pricing:DescribeServices"
+  ],
+  "Resource": "*"
+}
+```
+
+Notes:
+
+- **Which role:** the payer role only (the same role that already serves Cost Explorer for this feature). Pricing data is public list pricing and is not account specific, so member roles do not need it.
+- **Already covered if you use section 3:** the payer permissions policy in section 3 already contains a `Pricing` statement with exactly these three actions. If the payer role uses that policy, no IAM change is needed; the only change would be in code (adding `pricing` to the read-only allowlist), which is not done yet.
+- The Price List Query API is served from a small set of Regions only, independent of the Region being priced. The client must be created in a supported Region (for example `us-east-1`); this is a code detail for the implementation step, not an IAM setting.
+- `Resource` must be `*`; these actions do not support resource-level restrictions.
+- List prices are On-Demand public prices. They do not include your Savings Plans, Reserved Instances, EDP or other private discounts, so any estimate built from them must say so.
+- Not requested: no write action, and no `bcm-pricing-calculator` or `billingconductor` actions.
+
+**Approval required before:** (1) adding this statement to any role, and (2) adding `pricing` to `readonly_guard.py` `ALLOWED_OPERATIONS` / `IAM_ACTIONS`. When approved, regenerate the permission report with the command in section 5 so this document and the code allowlist stay identical.
+
+---
+
 ## Quick Reference: Which role needs what
 
 | Permission | Client | Execution Role | Payer Role | Member Role |
@@ -497,8 +594,12 @@ Remove the `Condition` block if you are not using external IDs.
 | Athena (VPC Flow Logs) | | ✅* | | ✅ |
 | S3 (Athena results + data) | | ✅* | ✅* | ✅ |
 | Glue Data Catalog | | ✅* | ✅* | ✅ |
+| Alternatives evidence tools: inventory and CloudWatch (Statement A, section 5) | | | ✅† | ✅† |
+| Alternatives evidence tools: Cost Explorer `ce:GetCostAndUsage` (Statement B, section 5) | | | ✅† | |
 
 *Only needed if Athena data is in the same account as the agent (Scenario A). See [Configuration Guide](configuration.md) for scenario details.
+
+†Only needed when `alternatives.enabled` is true. Statement A applies in every account that should be inspected; Statement B applies in the payer account only.
 
 ## Security Best Practices
 

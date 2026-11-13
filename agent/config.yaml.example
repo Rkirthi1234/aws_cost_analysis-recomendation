@@ -84,6 +84,53 @@ tools:
     - mcp
 
 # =============================================================================
+# Alternative-Service Evidence Tools (optional, OFF by default)
+# =============================================================================
+# When true, three read-only evidence tools are registered with the agent:
+#   identify_high_cost_services, collect_usage_evidence, collect_resource_inventory
+# They gather evidence only (no recommendations, no savings estimates) and only
+# inspect accounts listed under `accounts` above. Every inspected account's role
+# needs the read-only permissions listed in docs/iam-permissions.md (section 5).
+alternatives:
+  enabled: false
+
+# =============================================================================
+# Cost Threshold Configuration (optional; disabled by default)
+# =============================================================================
+# Flags services whose cost over the period reaches a threshold. Read-only: it only
+# reads Cost Explorer; nothing in AWS is changed.
+#   * Compared figure: total AmortizedCost over the period (start inclusive, end
+#     exclusive). Default period is month-to-date (1st of the UTC month up to, not
+#     including, today). Cost Explorer data can lag by up to 24 hours.
+#   * A cost equal to the threshold counts as crossed. Thresholds must be > 0.
+#   * Only USD is supported (no currency conversion).
+#   * Service keys come from agent/service_alternatives.yaml (ec2, s3, rds, ...).
+#     'ec2' sums 'Amazon Elastic Compute Cloud - Compute' and 'EC2 - Other'
+#     (EBS, NAT and data-transfer can be in 'EC2 - Other'); both are reported separately.
+#   * Notification de-duplication is in memory by default. Optionally keep it in one
+#     LOCAL file with dedupe.state_file (never AWS storage).
+#   * The amounts below are placeholders: set thresholds that suit your account.
+cost_thresholds:
+  enabled: false
+  currency: USD
+  services:
+    ec2: 0.01
+    s3: 0.01
+  # dedupe:
+  #   state_file: ./.cost_threshold_alerts.json
+
+# =============================================================================
+# Cost Threshold Alert Tool (optional, OFF by default)
+# =============================================================================
+# When true, one read-only tool, detect_cost_threshold_alerts, is registered with the
+# agent and the threshold section is added to the system prompt. The tool reads the
+# cost_thresholds section above (it reports 'disabled' while cost_thresholds.enabled
+# is false). It reports threshold status only: it sends NO notification and is NOT an
+# alternative-service recommendation. Independent of alternatives.enabled.
+threshold_detection:
+  enabled: false
+
+# =============================================================================
 # Alternative: Centralized Logging Account
 # =============================================================================
 # Use this instead of the accounts section above if the agent runs in the same

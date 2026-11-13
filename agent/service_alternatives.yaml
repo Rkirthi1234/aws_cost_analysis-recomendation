@@ -1,0 +1,879 @@
+# =============================================================================
+# Service Alternatives Catalog  (alternative AWS service recommendation feature)
+# =============================================================================
+# DATA ONLY. Read by agent/services/alternatives_catalog.py, which validates it
+# at load time. Nothing in this file triggers any AWS call.
+#
+# Rules for editing this file:
+#   * Every compatibility note MUST carry an https reference (AWS docs preferred).
+#   * Every reference (`references`) carries an https URL and the date it was
+#     last verified against that page.
+#   * Do not add numeric thresholds or compatibility rules that are not part of
+#     the approved design. Thresholds are never written here: a rule points to a
+#     setting (`parameter: {source: decision_setting, ref: ...}`) or to an AWS
+#     limit (`source: aws_limit`) and the value is looked up when it is used.
+#   * New alternative pairs need explicit approval before being set to
+#     `status: approved`. Entries with `status: pending_approval` are loaded and
+#     validated but never used for recommendations.
+#   * `required_evidence` (plain text) is echoed in the usage evidence output and
+#     is unchanged. `evidence_requirements` and `compatibility_rules` are the
+#     typed, machine-readable definitions; see the module docstring of
+#     alternatives_catalog.py for the verdict semantics (fail-closed: an unknown
+#     condition never fires a rule, and no rule firing means insufficient_data).
+#   * `repeat_for: {name: service, values: [s3, dynamodb]}` expands one item
+#     into one per value, replacing `{service}`.
+#
+# NOTE (unverified against a live account): the Cost Explorer service names in
+# `services.*.ce_names` follow Cost Explorer's SERVICE dimension, but exact
+# strings can differ per account/time. Confirm with the Phase 0 live check
+# (get_dimension_values, Dimension=SERVICE) before relying on them in production.
+
+schema_version: 1
+
+# -----------------------------------------------------------------------------
+# Service-name mapping: canonical key -> Cost Explorer names + Pricing API code
+# -----------------------------------------------------------------------------
+services:
+  ec2:
+    display_name: Amazon EC2
+    ce_names:
+      - "Amazon Elastic Compute Cloud - Compute"
+      - "EC2 - Other"
+    pricing_service_code: AmazonEC2
+
+  vpc:
+    display_name: Amazon VPC
+    ce_names:
+      - "Amazon Virtual Private Cloud"
+    pricing_service_code: AmazonVPC
+
+  rds:
+    display_name: Amazon RDS (includes Aurora)
+    ce_names:
+      - "Amazon Relational Database Service"
+    pricing_service_code: AmazonRDS
+
+  lambda:
+    display_name: AWS Lambda
+    ce_names:
+      - "AWS Lambda"
+    pricing_service_code: AWSLambda
+
+  ecs:
+    display_name: Amazon ECS (includes Fargate)
+    ce_names:
+      - "Amazon Elastic Container Service"
+    pricing_service_code: AmazonECS
+
+  s3:
+    display_name: Amazon S3
+    ce_names:
+      - "Amazon Simple Storage Service"
+    pricing_service_code: AmazonS3
+
+  dynamodb:
+    display_name: Amazon DynamoDB
+    ce_names:
+      - "Amazon DynamoDB"
+    pricing_service_code: AmazonDynamoDB
+
+# -----------------------------------------------------------------------------
+# Alternatives (approved pairs only)
+# -----------------------------------------------------------------------------
+alternatives:
+
+  # ===========================================================================
+  # NAT Gateway -> Gateway endpoints. S3 and DynamoDB are evaluated separately.
+  # ===========================================================================
+  - id: nat-gateway-to-gateway-endpoints
+    status: approved
+    description: >-
+      NAT Gateway data processing for traffic destined to S3 and DynamoDB can
+      instead use VPC gateway endpoints.
+    source:
+      name: NAT Gateway
+      # NAT Gateway cost can be reported under either service in Cost Explorer;
+      # it is isolated by usage type, not by service.
+      services: [ec2, vpc]
+      scope:
+        kind: usage_type_contains
+        values: ["NatGateway"]
+    alternative:
+      name: VPC gateway endpoints (S3 and DynamoDB)
+      kind: service_feature
+      services: [vpc]
+      pricing_note: >-
+        AWS documents no additional charge for gateway endpoints; the Pricing
+        API is therefore not needed for the alternative side of this pair.
+    required_evidence:
+      - "NAT Gateway cost split by usage type (processed bytes vs hours)"
+      - "Share of NAT traffic destined to S3 and DynamoDB"
+      - "Whether S3/DynamoDB gateway endpoints already exist for the same VPCs/route tables"
+    compatibility_notes:
+      - id: gateway-endpoint-scope
+        text: >-
+          Gateway endpoints provide connectivity to Amazon S3 and DynamoDB only;
+          NAT traffic to any other destination is unaffected.
+        reference: https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway.html
+      - id: gateway-endpoint-same-region
+        text: >-
+          A gateway endpoint works only for the service in the Region where it was
+          created: traffic to S3 or DynamoDB in a different Region does not use the
+          endpoint route (prefix lists are Region-specific), so it is not eligible
+          to be moved off the NAT gateway this way.
+        reference: https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway.html
+      - id: gateway-endpoint-route-tables
+        text: >-
+          Only subnets whose route table is associated with the gateway endpoint use
+          it; instances in other subnets keep using the public service endpoint (for
+          example through the NAT gateway).
+        reference: https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway.html
+      - id: gateway-endpoint-pricing
+        text: There is no additional charge for using gateway endpoints.
+        reference: https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway.html
+    references:
+      - id: vpc-gateway-endpoints
+        title: Gateway endpoints (Amazon VPC)
+        url: https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway.html
+        verified_on: "2026-11-13"
+    evidence_requirements:
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.same_region_bytes
+        type: number
+        unit: bytes
+        origin: planned
+        description: >-
+          Measured bytes sent from the in-scope NAT gateways to {service} in the SAME Region over the metrics
+          window (eligible traffic). Destination-level data is not in CloudWatch; it needs VPC Flow Logs or CUR.
+          No collector exists yet.
+        references: [vpc-gateway-endpoints]
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.cross_region_bytes
+        type: number
+        unit: bytes
+        origin: planned
+        description: >-
+          Measured bytes sent from the in-scope NAT gateways to {service} in a DIFFERENT Region (ineligible
+          traffic: a gateway endpoint cannot serve it). Same destination-level source as the eligible traffic.
+        references: [vpc-gateway-endpoints]
+      - key: nat.route_tables_using_nat
+        type: list
+        origin: planned
+        description: >-
+          Route table ids that send traffic through the in-scope NAT gateways. Route-table level data is not
+          in the current inventory (it only has VPC-level endpoint presence flags). No collector exists yet.
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.covered_route_table_ids
+        type: list
+        origin: planned
+        description: >-
+          Route table ids already associated with a {service} gateway endpoint. No collector exists yet.
+        references: [vpc-gateway-endpoints]
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.uncovered_route_table_ids
+        type: list
+        origin: derived
+        derived_from: [nat.route_tables_using_nat, "nat.{service}.covered_route_table_ids"]
+        derivation: route_tables_without_endpoint_route
+        description: Route tables that use the NAT gateways but have no {service} gateway endpoint route.
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.endpoint_coverage
+        type: enum
+        values: [full, partial, none]
+        origin: derived
+        derived_from: [nat.route_tables_using_nat, "nat.{service}.covered_route_table_ids"]
+        derivation: gateway_endpoint_route_table_coverage
+        description: >-
+          full = every route table that uses the NAT gateways has a {service} endpoint route; none = no
+          route table has one; partial = some do.
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        key: nat.{service}.vpc_has_gateway_endpoint
+        type: boolean
+        origin: collected
+        role: informational
+        source_path: "regions[].inventory.resources[].vpc_has_{service}_gateway_endpoint"
+        description: >-
+          VPC-level presence of a {service} gateway endpoint (existing inventory flag). Informational only: it
+          does not show which route tables are covered.
+      - key: nat.total_bytes_out_to_destination
+        type: number
+        unit: bytes
+        origin: collected
+        role: informational
+        source_path: "regions[].metrics.resources[<nat_gateway_id>].metrics.bytes_out_to_destination"
+        description: >-
+          NAT gateway CloudWatch totals. Informational only: totals without destination-level traffic are not
+          enough for any verdict.
+    compatibility_rules:
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        id: nat-{service}-endpoint-already-in-use
+        verdict: already_in_use
+        basis: approved_design
+        description: Every route table that uses the NAT gateways already has a {service} gateway endpoint route.
+        when:
+          - {evidence: "nat.{service}.endpoint_coverage", op: equals, value: full}
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        id: nat-{service}-only-cross-region-traffic
+        verdict: incompatible
+        basis: both
+        references: [vpc-gateway-endpoints]
+        description: >-
+          All measured traffic to {service} is cross-Region, which a gateway endpoint cannot serve.
+        when:
+          - {evidence: "nat.{service}.same_region_bytes", op: equals, value: 0}
+          - {evidence: "nat.{service}.cross_region_bytes", op: gt, value: 0}
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        id: nat-{service}-no-eligible-traffic
+        verdict: incompatible
+        basis: approved_design
+        description: Measured eligible (same-Region) traffic to {service} is zero, so there is nothing to offload.
+        when:
+          - {evidence: "nat.{service}.same_region_bytes", op: equals, value: 0}
+      - repeat_for: {name: service, values: [s3, dynamodb]}
+        id: nat-{service}-eligible-traffic-remaining
+        verdict: compatible
+        basis: both
+        references: [vpc-gateway-endpoints]
+        description: >-
+          Eligible traffic to {service} remains and the endpoint coverage is partial or absent; the uncovered
+          route tables are reported.
+        identifies: ["nat.{service}.uncovered_route_table_ids"]
+        when:
+          - {evidence: "nat.{service}.endpoint_coverage", op: in, values: [partial, none]}
+          - {evidence: "nat.{service}.same_region_bytes", op: gt, value: 0}
+
+  # ===========================================================================
+  # RDS for MySQL / PostgreSQL -> Aurora Serverless v2
+  # No universal ACU limits and no direct CPU/memory -> ACU conversion.
+  # ===========================================================================
+  - id: rds-mysql-postgres-to-aurora-serverless-v2
+    status: approved
+    description: >-
+      Provisioned RDS for MySQL or PostgreSQL instances may be cheaper on
+      Aurora Serverless v2 when their load is variable.
+    source:
+      name: RDS for MySQL / PostgreSQL
+      services: [rds]
+      scope:
+        kind: database_engine
+        values: ["MySQL", "PostgreSQL"]
+    alternative:
+      name: Amazon Aurora Serverless v2
+      # Aurora is billed under the same Cost Explorer service as RDS, so "already
+      # in use" must be detected at feature level (Phase 2 inventory), not by
+      # service name.
+      kind: service_feature
+      services: [rds]
+    required_evidence:
+      - "DB engine and engine version of each instance"
+      - "Instance class, Multi-AZ and storage configuration"
+      - "CloudWatch utilization history (CPU, connections, freeable memory, IOPS)"
+      - "Whether Aurora clusters or Serverless v2 instances already exist"
+    compatibility_notes:
+      - id: aurora-sv2-engines
+        text: >-
+          Aurora Serverless v2 is available with the aurora-mysql and
+          aurora-postgresql engines, so only MySQL- and PostgreSQL-compatible
+          sources can map to it; availability depends on Region and engine version.
+        reference: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.requirements.html
+      - id: aurora-sv2-region-version
+        text: >-
+          Aurora Serverless v2 support is listed per Region and per Aurora engine
+          version; a source instance is a candidate only when the Aurora version
+          it maps to supports Serverless v2 in its Region.
+        reference: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.Aurora_Fea_Regions_DB-eng.Feature.ServerlessV2.html
+      - id: aurora-sv2-capacity
+        text: >-
+          Capacity is configured as a range of Aurora capacity units (ACUs). The
+          allowed minimum and maximum depend on the Aurora engine version and
+          platform version, so they must be looked up for the specific version;
+          no fixed limits are used here.
+        reference: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.requirements.html
+      - id: aurora-sv2-auto-pause
+        text: >-
+          Scaling to zero ACUs (auto-pause) is only available on certain engine
+          versions and is enabled by setting the minimum capacity to zero.
+        reference: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html
+    references:
+      - id: aurora-sv2-requirements
+        title: Requirements and limitations for Aurora Serverless v2
+        url: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.requirements.html
+        verified_on: "2026-11-13"
+      - id: aurora-sv2-regions
+        title: Supported Regions and Aurora DB engines for Aurora Serverless v2
+        url: https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.Aurora_Fea_Regions_DB-eng.Feature.ServerlessV2.html
+        verified_on: "2026-11-13"
+    evidence_requirements:
+      - key: rds.engine
+        type: enum
+        values: [mysql, postgres]
+        origin: collected
+        source_path: "regions[].inventory.resources[].engine"
+        description: Source DB engine (only MySQL and PostgreSQL instances are in scope).
+      - key: rds.engine_version
+        type: string
+        origin: collected
+        source_path: "regions[].inventory.resources[].engine_version"
+        description: Exact engine version of the source instance.
+      - key: rds.region
+        type: string
+        origin: collected
+        source_path: "regions[].region"
+        description: Region of the source instance; Serverless v2 support and capacity are Region-specific.
+      - key: rds.aurora_version_mapping
+        type: object
+        origin: planned
+        description: >-
+          Verified, source-backed mapping from the exact source engine version to an Aurora engine and version.
+          Absent while the mapping is unverified. No collector or approved mapping source exists yet.
+        references: [aurora-sv2-regions]
+      - key: rds.serverless_v2_region_version_support
+        type: enum
+        values: [supported, unsupported]
+        origin: derived
+        derived_from: [rds.engine, rds.engine_version, rds.region, rds.aurora_version_mapping]
+        derivation: aurora_serverless_v2_support_lookup
+        description: >-
+          Whether the mapped Aurora engine version supports Serverless v2 in the Region. Known only after the
+          version mapping is verified; unverified is missing, never unsupported.
+        references: [aurora-sv2-regions, aurora-sv2-requirements]
+      - key: rds.serverless_v2_capacity_limits
+        type: object
+        origin: planned
+        description: >-
+          Source-backed Serverless v2 capacity limits (minimum, maximum, scaling to zero) for the specific
+          engine version, platform version and Region. Never a universal constant. No collector exists yet.
+        references: [aurora-sv2-requirements]
+      - key: rds.workload_capacity_estimate
+        type: object
+        origin: planned
+        description: >-
+          A defensible estimate of the capacity the workload needs on Serverless v2, with the method and inputs
+          it was based on. It must NOT be a direct conversion of RDS CPU or memory into ACUs. No approved
+          estimation method exists yet.
+      - key: rds.cloudwatch_utilization
+        type: object
+        origin: collected
+        role: informational
+        source_path: "regions[].metrics.resources[<db_instance_id>].metrics"
+        description: >-
+          Existing RDS CloudWatch summaries (CPU, connections, freeable memory, IOPS). Informational only:
+          they are inputs a future approved estimation method may use, not a capacity estimate.
+    compatibility_rules:
+      - id: rds-aurora-sv2-no-supported-target
+        verdict: incompatible
+        basis: both
+        references: [aurora-sv2-regions, aurora-sv2-requirements]
+        description: >-
+          The verified Aurora target for the engine, version and Region does not support Aurora Serverless v2.
+        when:
+          - {evidence: rds.serverless_v2_region_version_support, op: equals, value: unsupported}
+      - id: rds-aurora-sv2-supported-and-estimated
+        verdict: compatible
+        basis: both
+        references: [aurora-sv2-regions, aurora-sv2-requirements]
+        description: >-
+          The engine is MySQL or PostgreSQL, the version mapping is verified, the exact version and Region
+          support Serverless v2, source-backed capacity limits are known and a defensible workload capacity
+          estimate exists.
+        when:
+          - {evidence: rds.engine, op: in, values: [mysql, postgres]}
+          - {evidence: rds.aurora_version_mapping, op: is_present}
+          - {evidence: rds.serverless_v2_region_version_support, op: equals, value: supported}
+          - {evidence: rds.serverless_v2_capacity_limits, op: is_present}
+          - {evidence: rds.workload_capacity_estimate, op: is_present}
+
+  # ===========================================================================
+  # Lambda -> ECS on Fargate
+  # ===========================================================================
+  - id: lambda-steady-high-volume-to-fargate
+    status: approved
+    description: >-
+      Lambda functions with steady, high-volume invocation may be cheaper as
+      containers on ECS Fargate.
+    source:
+      name: AWS Lambda
+      services: [lambda]
+      scope:
+        kind: whole_service
+    alternative:
+      name: Amazon ECS on AWS Fargate
+      kind: service
+      services: [ecs]
+    required_evidence:
+      - "Invocation count, duration and memory per function"
+      - "Invocation pattern over time (steady vs bursty)"
+      - "Function triggers and integrations"
+      - "Whether ECS/Fargate is already in use in the account"
+    compatibility_notes:
+      - id: lambda-execution-limits
+        text: >-
+          Lambda limits differ by invocation type and function type. Memory is
+          128-10,240 MB for every function. The timeout of a standard function is
+          900 seconds (15 minutes) for every invocation type; functions on Lambda
+          Managed Instances can use up to 5,400 seconds (90 minutes) for
+          asynchronous invocations and for event source mappings other than Amazon
+          MQ and Amazon DocumentDB. Request and response payloads are limited to
+          6 MB each for synchronous invocation, while an asynchronous request is
+          limited to 1 MB. These describe the source workload and must be known per
+          function and invocation type.
+        reference: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+    references:
+      - id: lambda-quotas
+        title: Lambda quotas
+        url: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+        verified_on: "2026-11-13"
+    # "Steady" and "high volume" are not numerically defined here: the three
+    # workload thresholds are settings (alternative_decisions.lambda_to_fargate.*)
+    # that are intentionally unset (null) until approved; an unset threshold keeps
+    # the verdict at insufficient_data.
+    evidence_requirements:
+      - key: workload.irreplaceable_lambda_behavior
+        type: enum
+        values: [absent, present]
+        origin: attestation
+        description: >-
+          User statement on whether the function depends on Lambda-specific behavior that Fargate cannot
+          replace. Not stating it means the behavior is unknown.
+      - key: workload.trigger_replacement_assessed
+        type: boolean
+        origin: attestation
+        description: User statement that the replacement for each trigger on Fargate has been assessed.
+      - key: workload.containerizable
+        type: boolean
+        origin: attestation
+        description: User statement that the function can be packaged and run as a container.
+      - key: lambda.invocations_hourly_mean
+        type: number
+        unit: invocations per hour
+        origin: collected
+        source_path: "regions[].metrics.resources[<function_name>].metrics.invocations.mean"
+        requires_metric_coverage: true
+        coverage_series: invocations
+        description: Mean hourly invocations over the metrics window (zero-filled count series).
+      - key: lambda.duration_avg_ms
+        type: number
+        unit: milliseconds
+        origin: collected
+        source_path: "regions[].metrics.resources[<function_name>].metrics.duration_avg_ms.mean"
+        requires_metric_coverage: true
+        coverage_series: duration_avg_ms
+        description: Mean of the hourly average duration over the metrics window.
+      - key: lambda.active_hour_fraction
+        type: number
+        unit: fraction of hours
+        origin: collected
+        source_path: "regions[].metrics.resources[<function_name>].usage_pattern.stats.active_hour_fraction"
+        requires_metric_coverage: true
+        coverage_series: invocations
+        description: Fraction of hours in the window with at least one invocation (existing usage-pattern statistic).
+      - key: lambda.monthly_invocations
+        type: number
+        unit: invocations per month
+        origin: derived
+        derived_from: [lambda.invocations_hourly_mean]
+        derivation: monthly_invocations_from_hourly_mean
+        parameters:
+          - {source: decision_setting, ref: pricing.hours_per_month}
+        description: Hourly mean invocations scaled to a month with the configured hours per month.
+      - key: lambda.average_concurrency
+        type: number
+        unit: concurrent executions
+        origin: derived
+        derived_from: [lambda.invocations_hourly_mean, lambda.duration_avg_ms]
+        derivation: average_concurrency_from_invocations_and_duration
+        description: Average concurrent executions implied by the invocation rate and the average duration.
+      - key: lambda.active_duty_cycle_pct
+        type: number
+        unit: percent
+        origin: derived
+        derived_from: [lambda.active_hour_fraction]
+        derivation: fraction_to_percent
+        description: Active hour fraction expressed as a percentage.
+      - key: lambda.event_source_mappings
+        type: list
+        origin: collected
+        role: informational
+        source_path: "regions[].inventory.resources[].event_source_mappings"
+        description: >-
+          Event source mappings of the function (existing inventory). Informational only: other triggers are
+          not collected and mappings never decide a verdict.
+    compatibility_rules:
+      - id: lambda-fargate-irreplaceable-behavior
+        verdict: incompatible
+        basis: approved_design
+        description: The user confirmed an irreplaceable Lambda-specific behavior.
+        when:
+          - {evidence: workload.irreplaceable_lambda_behavior, op: equals, value: present}
+      - id: lambda-fargate-thresholds-met
+        verdict: compatible
+        basis: approved_design
+        description: >-
+          Trigger replacement is assessed, no irreplaceable Lambda-specific behavior exists, the function is
+          containerizable and every configured workload threshold is met. An unset threshold leaves the
+          verdict at insufficient_data (threshold_unset).
+        when:
+          - {evidence: workload.trigger_replacement_assessed, op: is_true}
+          - {evidence: workload.irreplaceable_lambda_behavior, op: equals, value: absent}
+          - {evidence: workload.containerizable, op: is_true}
+          - evidence: lambda.monthly_invocations
+            op: gte
+            parameter: {source: decision_setting, ref: lambda_to_fargate.min_monthly_invocations}
+          - evidence: lambda.average_concurrency
+            op: gte
+            parameter: {source: decision_setting, ref: lambda_to_fargate.min_average_concurrency}
+          - evidence: lambda.active_duty_cycle_pct
+            op: gte
+            parameter: {source: decision_setting, ref: lambda_to_fargate.min_active_duty_cycle_pct}
+
+  # ---------------------------------------------------------------------------
+  # EC2 cross-service alternatives (approved for Phase 2 evidence collection).
+  # Cost scope: BoxUsage = On-Demand instance running time, SpotUsage = Spot
+  # instance running time (AWS billing codes). This keeps EBS, NAT, data transfer
+  # and other "EC2 - Other" charges out of the instance-cost screen.
+  # Graviton and Spot are intentionally NOT alternatives here (cross-service only).
+  # Neither entry may be recommended without workload evidence.
+  # ---------------------------------------------------------------------------
+  - id: ec2-short-event-driven-to-lambda
+    status: approved
+    description: >-
+      EC2 workloads that are short-running and event-driven may be cheaper on
+      AWS Lambda than on always-on instances.
+    source:
+      name: Amazon EC2 instances
+      services: [ec2]
+      scope:
+        kind: usage_type_contains
+        values: ["BoxUsage", "SpotUsage"]
+    alternative:
+      name: AWS Lambda
+      kind: service
+      services: [lambda]
+    required_evidence:
+      - "Per-instance CPU, network and runtime pattern over the metrics window (14 days minimum, 30 preferred)"
+      - "Instance vCPU and memory, and memory utilization (memory utilization requires CloudWatch agent metrics)"
+      - "Whether the workload is event-driven, and its typical duration and payload size per event (application-level; not available from EC2 metrics)"
+      - "Operating system, instance store, GPU or accelerator use, and attached storage"
+      - "Dependencies on load balancers, Auto Scaling groups, long-lived connections or local state"
+      - "Whether Lambda is already in use in the account"
+    compatibility_notes:
+      - id: lambda-execution-limits
+        text: >-
+          Standard Lambda functions have a maximum timeout of 900 seconds (15
+          minutes) for every invocation type and 128 MB to 10,240 MB of memory. Only
+          functions on Lambda Managed Instances can run longer (up to 5,400 seconds
+          for asynchronous invocations and for event source mappings other than
+          Amazon MQ and Amazon DocumentDB); the catalog evaluates standard
+          functions and does not assume Managed Instances. Payload limits depend on
+          the invocation type: 6 MB for the request and 6 MB for the response of a
+          synchronous invocation, and 1 MB for an asynchronous request. A workload
+          that exceeds an applicable limit cannot run as a single Lambda
+          invocation.
+        reference: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+      - id: lambda-cpu-scales-with-memory
+        text: >-
+          Lambda allocates CPU in proportion to configured memory, with the
+          equivalent of one vCPU at 1,769 MB; CPU is not configured separately.
+        reference: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+    references:
+      - id: lambda-quotas
+        title: Lambda quotas
+        url: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
+        verified_on: "2026-11-13"
+    evidence_requirements:
+      - key: workload.event_driven
+        type: boolean
+        origin: attestation
+        description: User statement that the workload is event-driven (application-level; not visible in EC2 metrics).
+      - key: workload.lambda_invocation_type
+        type: enum
+        values: [synchronous, asynchronous, event_source_mapping]
+        origin: attestation
+        description: How the workload would be invoked on Lambda; the applicable timeout and payload limits depend on it.
+      - key: workload.max_event_duration_seconds
+        type: number
+        unit: seconds
+        origin: attestation
+        description: Longest processing time of a single event.
+      - key: workload.max_request_payload_mb
+        type: number
+        unit: MB
+        origin: attestation
+        description: Largest request payload of a single event.
+      - key: workload.max_response_payload_mb
+        type: number
+        unit: MB
+        origin: attestation
+        description: Largest response payload of a single event (only limited for synchronous invocations).
+      - key: ec2.memory_mib
+        type: number
+        unit: MiB
+        origin: collected
+        source_path: "regions[].inventory.resources[].specs.memory_mib"
+        description: Instance memory from the instance type specification.
+      - key: ec2.memory_utilization_max_pct
+        type: number
+        unit: percent
+        origin: planned
+        requires_metric_coverage: true
+        coverage_series: memory_utilization
+        description: >-
+          Peak memory utilization over the metrics window. It requires CloudWatch agent metrics, which are not
+          collected today.
+      - key: ec2.peak_memory_mib
+        type: number
+        unit: MiB
+        origin: derived
+        derived_from: [ec2.memory_mib, ec2.memory_utilization_max_pct]
+        derivation: peak_memory_mib_from_utilization_and_instance_memory
+        description: Peak memory in use (instance memory x peak utilization).
+    compatibility_rules:
+      - id: ec2-lambda-not-event-driven
+        verdict: incompatible
+        basis: approved_design
+        description: The (current) attestation confirms the workload is not event-driven.
+        when:
+          - {evidence: workload.event_driven, op: is_false}
+      - id: ec2-lambda-exceeds-timeout
+        verdict: incompatible
+        basis: both
+        references: [lambda-quotas]
+        description: The longest event processing time exceeds the timeout that applies to the invocation type.
+        when:
+          - evidence: workload.max_event_duration_seconds
+            op: exceeds_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.timeout_seconds}
+            invocation_type_evidence: workload.lambda_invocation_type
+      - id: ec2-lambda-exceeds-request-payload
+        verdict: incompatible
+        basis: both
+        references: [lambda-quotas]
+        description: The largest request payload exceeds the request payload limit of the invocation type.
+        when:
+          - evidence: workload.max_request_payload_mb
+            op: exceeds_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.request_payload_mb}
+            invocation_type_evidence: workload.lambda_invocation_type
+      - id: ec2-lambda-exceeds-response-payload
+        verdict: incompatible
+        basis: both
+        references: [lambda-quotas]
+        description: The largest response payload exceeds the response payload limit of the invocation type.
+        when:
+          - evidence: workload.max_response_payload_mb
+            op: exceeds_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.response_payload_mb}
+            invocation_type_evidence: workload.lambda_invocation_type
+      - id: ec2-lambda-exceeds-memory
+        verdict: incompatible
+        basis: both
+        references: [lambda-quotas]
+        description: Peak memory in use exceeds the maximum Lambda function memory.
+        when:
+          - evidence: ec2.peak_memory_mib
+            op: gt
+            parameter: {source: aws_limit, ref: lambda.memory_max_mb}
+      - id: ec2-lambda-within-limits
+        verdict: compatible
+        basis: both
+        references: [lambda-quotas]
+        description: >-
+          The workload is event-driven, its duration and payloads are within the limits applicable to the
+          invocation type and its peak memory fits the maximum Lambda memory.
+        when:
+          - {evidence: workload.event_driven, op: is_true}
+          - evidence: workload.max_event_duration_seconds
+            op: within_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.timeout_seconds}
+            invocation_type_evidence: workload.lambda_invocation_type
+          - evidence: workload.max_request_payload_mb
+            op: within_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.request_payload_mb}
+            invocation_type_evidence: workload.lambda_invocation_type
+          - evidence: workload.max_response_payload_mb
+            op: within_applicable_lambda_limit
+            parameter: {source: aws_limit, ref: lambda.applicable.response_payload_mb}
+            invocation_type_evidence: workload.lambda_invocation_type
+          - evidence: ec2.peak_memory_mib
+            op: lte
+            parameter: {source: aws_limit, ref: lambda.memory_max_mb}
+
+  - id: ec2-containerized-to-fargate
+    status: approved
+    description: >-
+      Containerized EC2 workloads may be cheaper to run on Amazon ECS with
+      AWS Fargate than on always-on instances.
+    source:
+      name: Amazon EC2 instances
+      services: [ec2]
+      scope:
+        kind: usage_type_contains
+        values: ["BoxUsage", "SpotUsage"]
+    alternative:
+      name: Amazon ECS on AWS Fargate
+      kind: service
+      services: [ecs]
+    required_evidence:
+      - "Per-instance CPU, network and runtime pattern over the metrics window (14 days minimum, 30 preferred)"
+      - "Instance vCPU and memory, and memory utilization (memory utilization requires CloudWatch agent metrics)"
+      - "Whether the workload is already containerized (for example, instances registered as ECS container instances)"
+      - "Operating system family and CPU architecture"
+      - "Persistent local state (instance store or attached volumes) and networking requirements"
+      - "Whether ECS/Fargate is already in use in the account"
+    compatibility_notes:
+      - id: fargate-task-size
+        text: >-
+          Fargate tasks must specify task-level CPU and memory, and the values
+          must be one of the documented valid combinations (the smallest being
+          0.25 vCPU with 512 MiB).
+        reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html
+      - id: fargate-awsvpc
+        text: Fargate tasks require the awsvpc network mode.
+        reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html
+      - id: fargate-os-arch
+        text: >-
+          Fargate task definitions specify an operating system family (Linux or
+          Windows) and a CPU architecture (X86_64 or ARM64 for Linux tasks);
+          Windows containers on Fargate cannot use less than 1 vCPU.
+        reference: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html
+    references:
+      - id: fargate-task-sizes
+        title: Fargate task CPU and memory combinations
+        url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-tasks-services.html
+        verified_on: "2026-11-13"
+      - id: ecs-task-definition-parameters
+        title: Amazon ECS task definition parameters
+        url: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html
+        verified_on: "2026-11-13"
+    evidence_requirements:
+      - key: workload.containerizable
+        type: boolean
+        origin: attestation
+        description: >-
+          User statement that the workload can run in a container. ECS container-instance registration is only
+          an inference and is informational.
+      - key: ec2.is_ecs_container_instance
+        type: boolean
+        origin: collected
+        role: informational
+        source_path: "regions[].inventory.resources[].is_ecs_container_instance"
+        description: The instance is registered as an ECS container instance. Informational only; not proof of containerization.
+      - key: ec2.architecture
+        type: string
+        origin: collected
+        source_path: "regions[].inventory.resources[].architecture"
+        description: EC2 architecture value (for example x86_64 or arm64).
+      - key: ec2.platform
+        type: string
+        origin: collected
+        source_path: "regions[].inventory.resources[].platform"
+        description: EC2 platform details (for example Linux/UNIX or Windows).
+      - key: ec2.target_os_family
+        type: enum
+        values: [LINUX, WINDOWS, UNSUPPORTED]
+        origin: derived
+        derived_from: [ec2.platform]
+        derivation: fargate_os_family_from_ec2_platform
+        description: >-
+          Fargate operating system family for the instance platform. A platform string the derivation does
+          not recognize is treated as missing evidence, never as UNSUPPORTED.
+        references: [ecs-task-definition-parameters]
+      - key: ec2.vcpus
+        type: number
+        unit: vCPUs
+        origin: collected
+        source_path: "regions[].inventory.resources[].specs.vcpus"
+        description: Instance vCPUs from the instance type specification.
+      - key: ec2.cpu_max_pct
+        type: number
+        unit: percent
+        origin: collected
+        source_path: "regions[].metrics.resources[<instance_id>].metrics.cpu_max.{statistic}"
+        requires_metric_coverage: true
+        coverage_series: cpu_max
+        parameters:
+          - {source: decision_setting, ref: ec2_to_fargate.sizing_statistic}
+        description: >-
+          CPU utilization over the metrics window using the configured sizing statistic (approved: max of the
+          hourly maximum series).
+      - key: ec2.peak_vcpus_used
+        type: number
+        unit: vCPUs
+        origin: derived
+        derived_from: [ec2.cpu_max_pct, ec2.vcpus]
+        derivation: peak_vcpus_from_cpu_pct_and_vcpus
+        description: vCPUs in use at the sizing statistic (instance vCPUs x CPU utilization).
+      - key: ec2.memory_mib
+        type: number
+        unit: MiB
+        origin: collected
+        source_path: "regions[].inventory.resources[].specs.memory_mib"
+        description: Instance memory from the instance type specification.
+      - key: ec2.memory_utilization_max_pct
+        type: number
+        unit: percent
+        origin: planned
+        requires_metric_coverage: true
+        coverage_series: memory_utilization
+        description: >-
+          Peak memory utilization over the metrics window. It requires CloudWatch agent metrics, which are not
+          collected today.
+      - key: ec2.peak_memory_mib
+        type: number
+        unit: MiB
+        origin: derived
+        derived_from: [ec2.memory_mib, ec2.memory_utilization_max_pct]
+        derivation: peak_memory_mib_from_utilization_and_instance_memory
+        description: Peak memory in use (instance memory x peak utilization).
+    compatibility_rules:
+      - id: ec2-fargate-not-containerizable
+        verdict: incompatible
+        basis: approved_design
+        description: The (current) attestation confirms the workload cannot be containerized.
+        when:
+          - {evidence: workload.containerizable, op: is_false}
+      - id: ec2-fargate-unsupported-architecture
+        verdict: incompatible
+        basis: both
+        references: [ecs-task-definition-parameters]
+        description: The instance CPU architecture is neither x86_64 nor arm64.
+        when:
+          - {evidence: ec2.architecture, op: not_in, values: [x86_64, arm64]}
+      - id: ec2-fargate-unsupported-os
+        verdict: incompatible
+        basis: both
+        references: [ecs-task-definition-parameters]
+        description: The instance operating system has no Fargate operating system family.
+        when:
+          - {evidence: ec2.target_os_family, op: equals, value: UNSUPPORTED}
+      - id: ec2-fargate-exceeds-valid-sizing
+        verdict: incompatible
+        basis: both
+        references: [fargate-task-sizes]
+        description: >-
+          No valid Fargate task size covers the peak CPU and memory plus the configured headroom for the
+          operating system family.
+        when:
+          - evidence: ec2.peak_vcpus_used
+            op: fargate_size_exceeds
+            parameter: {source: aws_limit, ref: fargate.task_sizes}
+            headroom: {source: decision_setting, ref: ec2_to_fargate.headroom_pct}
+            memory_evidence: ec2.peak_memory_mib
+            os_family_evidence: ec2.target_os_family
+      - id: ec2-fargate-fits-valid-sizing
+        verdict: compatible
+        basis: both
+        references: [fargate-task-sizes, ecs-task-definition-parameters]
+        description: >-
+          The workload is containerizable, its architecture and operating system are supported and a valid
+          Fargate task size covers the peak CPU and memory plus the configured headroom.
+        when:
+          - {evidence: workload.containerizable, op: is_true}
+          - {evidence: ec2.architecture, op: in, values: [x86_64, arm64]}
+          - {evidence: ec2.target_os_family, op: in, values: [LINUX, WINDOWS]}
+          - evidence: ec2.peak_vcpus_used
+            op: fargate_size_fits
+            parameter: {source: aws_limit, ref: fargate.task_sizes}
+            headroom: {source: decision_setting, ref: ec2_to_fargate.headroom_pct}
+            memory_evidence: ec2.peak_memory_mib
+            os_family_evidence: ec2.target_os_family

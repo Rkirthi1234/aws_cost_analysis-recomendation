@@ -76,6 +76,18 @@ tools:
     - analysis
     - billing
     - mcp
+
+# =============================================================================
+# 7. Alternative-Service Evidence Tools (optional, OFF by default)
+# =============================================================================
+alternatives:
+  enabled: false
+
+# =============================================================================
+# 8. Cost Threshold Alert Tool (optional, OFF by default)
+# =============================================================================
+threshold_detection:
+  enabled: false
 ```
 
 ---
@@ -169,6 +181,54 @@ The AWS Knowledge MCP server provides documentation search for cost optimization
 | `mcp` | AWS Knowledge documentation search | Controlled by `mcp.enabled` and `mcp.servers.<name>.enabled` (see section 5) |
 
 To change which tools are available, adjust the `accounts` and `mcp` settings above. Disabling an individual tool group such as `billing` or `analysis` would require a code change.
+
+### 7. Alternative-Service Evidence Tools (`alternatives`)
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `enabled` | Register the three alternatives evidence tools (`identify_high_cost_services`, `collect_usage_evidence`, `collect_resource_inventory`) and add the evidence workflow to the system prompt | `false` |
+
+How the flag behaves:
+
+- **Off (default, or section absent):** nothing is registered and the system prompt is unchanged. Existing tools are not affected.
+- **On:** the three tools are added after the billing tools, and the evidence workflow section is appended to the system prompt. Only a boolean `true` enables the feature; values such as `"true"` or `1` keep it disabled and log a warning.
+- **If initialization fails** (for example the alternatives catalog cannot be loaded), a warning is logged and the agent starts with its existing tools only.
+
+What the tools do:
+
+- They gather **evidence only**: high-cost services, resource inventory, CloudWatch usage metrics, usage patterns and evidence gaps. They do not recommend alternatives or estimate savings.
+- They analyse **all accounts in `accounts`** by default. Only accounts present in that list can be targeted; role ARNs and external IDs are never returned to the model.
+- Detailed resources are capped at **25 per response** (aggregate counts always cover everything collected) and a call accepts at most **3 regions**. When no region is given, each account's configured `region` is used.
+- AWS resource names and tag values are sanitized and truncated before they reach the model.
+
+Every inspected account's role needs extra read-only permissions: see [IAM Permissions, section 5](iam-permissions.md#5-optional-read-only-permissions-for-the-alternatives-evidence-tools). The optional `usage_patterns` section (metrics window and pattern thresholds) is described in `agent/services/usage_pattern_config.py`.
+
+### 8. Cost Threshold Alert Tool (`threshold_detection`)
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `enabled` | Register the read-only `detect_cost_threshold_alerts` tool and add the threshold section to the system prompt | `false` |
+
+Two separate settings control the feature:
+
+| Setting | Controls |
+|---------|----------|
+| `threshold_detection.enabled` | Whether the tool is **registered** with the agent (this section) |
+| `cost_thresholds.enabled` | Whether the detector **evaluates** anything. While it is not `true` the tool returns `status: disabled` and makes no Cost Explorer call. The `cost_thresholds` section (services, thresholds, currency, optional `dedupe.state_file`) is described in `agent/config.yaml.example` |
+
+How the flag behaves:
+
+- **Off (default, or section absent):** the tool is not registered, the threshold module is not imported and the system prompt is unchanged.
+- **On:** the tool is added after the alternatives tools (if any) and the threshold section is appended to the system prompt. Only a boolean `true` enables it; values such as `"true"` or `1` keep it disabled and log a warning.
+- **If initialization fails**, a warning is logged and the agent starts with its existing tools only.
+- It does **not** turn on `alternatives.enabled`, and `alternatives.enabled` does not turn it on.
+
+What the tool does and does not do:
+
+- It is read-only: Cost Explorer `GetCostAndUsage` on the payer account, through the read-only guard. Nothing in AWS is created, modified, started, stopped or deleted.
+- It returns structured alert information only. It sends **no** notification; sending notifications is not part of this tool.
+- It never records an alert as notified. De-duplication (`ThresholdAlertDeduplicator`) is used read-only, so a repeated call reports the same `new_alert` until a notification workflow records it.
+- A threshold alert is not an alternative-service recommendation: no compatibility evaluation, pricing or savings is produced.
 
 ---
 

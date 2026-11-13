@@ -121,6 +121,33 @@ All billing tools route through the payer account via `SessionManager` for org-w
 | `suggest_followup_questions` | Generate follow-up query suggestions |
 | `get_optimization_recommendations` | Quick optimization tips |
 
+## Alternatives Evidence Tools (optional, disabled by default)
+
+Registered only when `alternatives.enabled: true` in `agent/config.yaml` (see the [Configuration Guide](configuration.md#7-alternative-service-evidence-tools-alternatives)). They are in addition to the tools above and need the read-only permissions in [IAM Permissions, section 5](iam-permissions.md#5-optional-read-only-permissions-for-the-alternatives-evidence-tools).
+
+| Tool | Description |
+|------|-------------|
+| `identify_high_cost_services` | Cost Explorer screening for a date range (`end_date` is exclusive): high-cost services, applicable alternative candidates and the evidence each one requires |
+| `collect_usage_evidence` | Inventory, CloudWatch metrics, usage patterns and evidence gaps for one `alternative_id`, across all configured accounts unless `account_id` is given |
+| `collect_resource_inventory` | Compact read-only inventory of one resource type (`ec2`, `lambda`, `ecs`, `rds`, `nat_gateway`) |
+
+These tools gather evidence only. They never recommend an alternative, assess compatibility or estimate savings. Detailed resources are capped at 25 per response; aggregate counts, warnings, errors, missing permissions and evidence gaps are always preserved.
+
+## Cost Threshold Alert Tool (optional, disabled by default)
+
+Registered only when `threshold_detection.enabled: true` in `agent/config.yaml` (see the [Configuration Guide](configuration.md#8-cost-threshold-alert-tool-threshold_detection)). Independent of `alternatives.enabled`; it needs only `ce:GetCostAndUsage` on the payer role.
+
+| Tool | Description |
+|------|-------------|
+| `detect_cost_threshold_alerts` | Compares each service configured under `cost_thresholds.services` (for example EC2 and S3) with its threshold and returns, per service: threshold status, actual cost, configured threshold, currency, period and notification status. Optional `start_date` / `end_date` (`end_date` exclusive; both or neither, default month-to-date) |
+
+The tool is read-only and returns structured alert information only:
+
+- It sends **no** notification (no e-mail, SNS or other delivery) and every response says `notification_sent: false`.
+- A threshold alert is **not** an alternative-service recommendation. It does not evaluate compatibility, pricing or savings.
+- `notification_status` uses the existing de-duplication: `new_alert`, `already_notified` or `not_applicable`. The tool never records an alert as notified; only a notification workflow that has accepted the notification may do that.
+- Invalid configuration, a disabled `cost_thresholds` section, missing cost data, non-USD units and AWS API errors are reported as structured results, never as exceptions.
+
 ## Tool Routing
 
 The agent automatically routes queries to the right tools:
@@ -129,3 +156,5 @@ The agent automatically routes queries to the right tools:
 - **Resource-level details** (e.g., "which EC2 instances") → Athena tools (`execute_cur_athena_query`)
 - **Network traffic** (e.g., "top talkers") → VPC Flow Logs tools (`execute_vpc_flowlog_query`)
 - **Best practices** (e.g., "how to optimize S3") → AWS Knowledge MCP tools
+- **Alternative-service evidence** (only when `alternatives.enabled` is true) → `identify_high_cost_services`, then `collect_usage_evidence` / `collect_resource_inventory`
+- **Cost threshold alerts** (only when `threshold_detection.enabled` is true) → `detect_cost_threshold_alerts`

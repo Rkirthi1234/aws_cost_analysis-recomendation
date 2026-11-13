@@ -40,6 +40,42 @@ app = BedrockAgentCoreApp()
 _agent = None
 
 
+def _alternatives_flag_on(config) -> bool:
+    """True only when alternatives.enabled is the boolean true (default: false).
+
+    Evaluated before the optional alternatives module is imported, so a disabled feature costs
+    no import and cannot emit import-time warnings. A non-boolean value keeps the feature
+    disabled and logs a warning (same behaviour as before).
+    """
+    getter = getattr(config, "get", None)
+    value = getter("alternatives.enabled", False) if callable(getter) else False
+    if value is True:
+        return True
+    if value is not None and not isinstance(value, bool):
+        logger.warning(
+            "alternatives.enabled must be true or false (got %r); alternatives tools stay disabled", value
+        )
+    return False
+
+
+def _threshold_flag_on(config) -> bool:
+    """True only when threshold_detection.enabled is the boolean true (default: false).
+
+    Independent of alternatives.enabled and of cost_thresholds.enabled. Evaluated before the
+    optional threshold module is imported, so a disabled feature costs no import. A non-boolean
+    value keeps the feature disabled and logs a warning.
+    """
+    getter = getattr(config, "get", None)
+    value = getter("threshold_detection.enabled", False) if callable(getter) else False
+    if value is True:
+        return True
+    if value is not None and not isinstance(value, bool):
+        logger.warning(
+            "threshold_detection.enabled must be true or false (got %r); the threshold tool stays disabled", value
+        )
+    return False
+
+
 def _initialize_agent():
     """Initialize the agent with all services and tools."""
     global _agent
@@ -147,6 +183,57 @@ def _initialize_agent():
     tools.extend(billing_tools.get_tools())
     logger.info(f"Billing tools added: {len(billing_tools.get_tools())} tools")
     
+    # Alternatives evidence tools: opt-in via alternatives.enabled (default: false).
+    # When the flag is off the optional module is not even imported. The import lives inside the
+    # try so a problem in this optional module can never prevent the existing tools above from loading.
+    alternatives_registered = False
+    try:
+        if _alternatives_flag_on(config):
+            from agent.tools.alternatives_tools import get_alternatives_tools
+            alternatives_tools = get_alternatives_tools(config, session_manager, account_registry)
+            tools.extend(alternatives_tools)
+            alternatives_registered = bool(alternatives_tools)
+            if alternatives_registered:
+                logger.info(f"Alternatives tools added: {len(alternatives_tools)} tools")
+            else:
+                logger.warning(
+                    "alternatives.enabled is true but no alternatives tools were registered "
+                    "(see the AlternativesTools warning above); continuing without them"
+                )
+        else:
+            logger.info("Alternatives tools disabled (alternatives.enabled is not true)")
+    except Exception as e:
+        logger.warning(
+            f"Alternatives tools could not be initialized ({type(e).__name__}: {e}); "
+            "continuing with the existing tools only"
+        )
+
+    # Cost threshold alert tool: opt-in via threshold_detection.enabled (default: false), independent
+    # of the alternatives flag. Same safeguards: the flag is checked before the optional module is
+    # imported, and the import lives inside the try so a problem here can never prevent the existing
+    # tools from loading.
+    threshold_registered = False
+    try:
+        if _threshold_flag_on(config):
+            from agent.tools.threshold_tools import get_threshold_tools
+            threshold_tools = get_threshold_tools(config, session_manager, account_registry)
+            tools.extend(threshold_tools)
+            threshold_registered = bool(threshold_tools)
+            if threshold_registered:
+                logger.info(f"Threshold tool added: {len(threshold_tools)} tool(s)")
+            else:
+                logger.warning(
+                    "threshold_detection.enabled is true but no threshold tool was registered "
+                    "(see the ThresholdTools warning above); continuing without it"
+                )
+        else:
+            logger.info("Threshold tool disabled (threshold_detection.enabled is not true)")
+    except Exception as e:
+        logger.warning(
+            f"Threshold tool could not be initialized ({type(e).__name__}: {e}); "
+            "continuing with the existing tools only"
+        )
+
     # Add MCP clients as tools
     tools.extend(mcp_clients)
     logger.info(f"Total tools available: {len(tools)}")
@@ -162,7 +249,10 @@ def _initialize_agent():
     logger.info(f"Tool caching: {'enabled' if config.model_cache_tools else 'disabled'}")
     
     # Get system prompt text
-    system_prompt_text = get_system_prompt()
+    system_prompt_text = get_system_prompt(
+        include_alternatives=alternatives_registered,
+        include_threshold_detection=threshold_registered,
+    )
     logger.info(f"System prompt loaded: {len(system_prompt_text)} characters")
     
     # Wrap system prompt with cache point for prompt caching

@@ -97,10 +97,19 @@ class SessionManager:
         try:
             response = self._sts_client.assume_role(**params)
         except Exception as e:
+            # Never interpolate the raw exception: STS/botocore messages can contain
+            # the role ARN, the caller ARN or (for validation errors) the ExternalId.
+            # Only the error code (or exception type) is safe to surface. `from None`
+            # also keeps the original message out of chained tracebacks in logs.
+            response_body = getattr(e, "response", None)
+            code = None
+            if isinstance(response_body, dict):
+                code = (response_body.get("Error") or {}).get("Code")
+            detail = code if isinstance(code, str) and code else type(e).__name__
             raise RuntimeError(
                 f"Failed to assume role for account {_mask_account_id(entry.account_id)} "
-                f"(role configured): {e}"
-            ) from e
+                f"(role configured): {detail}"
+            ) from None
 
         creds = response["Credentials"]
         return CachedSession(
