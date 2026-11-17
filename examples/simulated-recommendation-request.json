@@ -1,0 +1,53 @@
+{
+  "analysis_id": "PASTE_ANALYSIS_ID_FROM_COST_ANALYSIS",
+  "regions": [
+    "us-east-1"
+  ],
+  "service": "Amazon EC2",
+  "workload_inputs": [
+    {
+      "account_id": "960717897320",
+      "region": "us-east-1",
+      "resource_id": "i-08228576b5fffc52a",
+      "simulated": true,
+      "answers": [
+        {
+          "question": "Does the application run continuously or respond to events?",
+          "answer": "Responds to events"
+        },
+        {
+          "question": "What is the maximum execution time per task?",
+          "answer": "20 seconds"
+        },
+        {
+          "question": "What would trigger the application on Lambda?",
+          "answer": "S3 file upload; asynchronous invocation"
+        },
+        {
+          "question": "What are the maximum request and response sizes?",
+          "answer": "Request: 0.1 MB; response: 0 MB because output is saved to S3"
+        },
+        {
+          "question": "What is the peak memory usage?",
+          "answer": "256 MiB; simulated measurement"
+        },
+        {
+          "question": "What are the application dependencies and requirements?",
+          "answer": "Python image-processing library; files stored in S3; no persistent local state, private-network dependency or special hardware"
+        },
+        {
+          "question": "Can the application run in a container?",
+          "answer": "Yes; assumed for testing"
+        },
+        {
+          "question": "What is the CPU usage?",
+          "answer": "Average: 10%; peak: 25%; simulated measurements"
+        },
+        {
+          "question": "How many tasks run per month?",
+          "answer": "10000"
+        }
+      ]
+    }
+  ]
+}

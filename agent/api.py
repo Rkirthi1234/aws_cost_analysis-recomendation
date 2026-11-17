@@ -9,8 +9,9 @@ import logging
 import os
 from datetime import date
 from typing import Annotated, Any
+from types import SimpleNamespace
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent.services.alternatives_catalog import AlternativesCatalog
@@ -45,7 +46,7 @@ class WorkloadRequest(BaseModel):
     regions: list[Annotated[str, Field(min_length=1, max_length=64)]] | None = Field(
         default=None, min_length=1, max_length=10, description="Omit to use configured account regions.")
     workload_inputs: list[dict[str, Any]] = Field(default_factory=list, max_length=200,
-        description="Leave empty for the first test. Later supply verified workload facts using docs/recommendations.md.")
+        description="Leave empty for the first test. Live mode uses verified evidence records. For the offline demo, use one profile with simulated: true and the documented answers.")
 
 
 class ThresholdRequest(WorkloadRequest):
@@ -117,8 +118,22 @@ def get_service() -> RecommendationService:
     return service
 
 
-def get_cost_workflow() -> CostAnalysisWorkflow:
-    return CostAnalysisWorkflow(_build_service(), AnalysisStore(os.environ.get("COST_ANALYZER_ANALYSIS_DB", ".cost_analyses.sqlite3")))
+async def get_cost_workflow(request: Request) -> CostAnalysisWorkflow:
+    # Inspect the explicit demonstration request before constructing any boto3
+    # client: even credential discovery can otherwise access AWS metadata.
+    body = await request.json()
+    profiles = body.get("workload_inputs", []) if isinstance(body, dict) else []
+    offline = (request.url.path == "/recommendations" and isinstance(profiles, list) and
+               any(isinstance(p, dict) and ("answers" in p or p.get("simulated") is not False and "simulated" in p) for p in profiles))
+    if offline:
+        try:
+            config = ConfigService(os.environ.get("COST_ANALYZER_CONFIG", "agent/config.yaml"))
+            engine = SimpleNamespace(config=config, registry=config.account_registry, catalog=AlternativesCatalog.load())
+        except Exception:
+            raise HTTPException(status_code=503, detail="Check the local report configuration.") from None
+    else:
+        engine = _build_service()
+    return CostAnalysisWorkflow(engine, AnalysisStore(os.environ.get("COST_ANALYZER_ANALYSIS_DB", ".cost_analyses.sqlite3")))
 
 
 def get_saved_reports() -> SavedReportReader:
@@ -174,7 +189,7 @@ def saved_cost_analysis(analysis_id: str, saved: SavedReports, include_details: 
 
 @app.post("/recommendations", tags=["Main workflow"], summary="4. Create recommendations")
 def recommendations(request: RecommendationRequest, workflow: Workflow, include_details: DetailFlag = False):
-    """Evaluate and save alternatives using an analysis ID; return a recommendation ID."""
+    """Evaluate live evidence, or explicitly simulate the documented EC2 sample with no AWS calls. Saves a recommendation ID."""
     if not is_alternatives_enabled(workflow.engine.config):
         raise HTTPException(status_code=503, detail="Set alternatives.enabled: true in the local configuration.")
     return _respond(workflow.recommend, request, renderer=lambda r: recommendation_view(r, include_details))

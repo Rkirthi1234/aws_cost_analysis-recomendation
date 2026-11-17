@@ -53,6 +53,13 @@ def _priced(item):
 
 
 def recommendation_view(report, include_details=False):
+    if report.get("simulated") is True:
+        result = {k: v for k, v in report.items() if k not in (
+            "billing_scope", "warnings", "service_key", "selected_period_cost_usd", "selected_period_cost_usd_exact")}
+        result["currency"] = "USD"
+        if include_details:
+            result["details"] = report
+        return result
     status = report["status"]
     result = {k: report[k] for k in ("recommendation_id", "analysis_id", "created_at", "service", "period", "selected_period_cost_usd") if k in report}
     if "selected_period_cost_before_credits_usd" in report:

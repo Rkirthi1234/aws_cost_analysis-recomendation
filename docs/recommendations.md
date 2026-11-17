@@ -7,6 +7,49 @@ same service. There is no migration, AWS write, schedule, email or SNS delivery.
 The report itself is the on-demand notification. Live AWS validation remains a
 separate deployment check; offline tests use fake clients only.
 
+## Offline question-and-answer demonstration (testing branch)
+
+`POST /recommendations` now accepts the exact nine questions in
+`examples/simulated-recommendation-request.json`, under one profile with
+`simulated: true`. This example demonstrates **EC2 → Lambda only**; all five live
+catalog entries remain available through the existing verified-evidence flow.
+
+1. Apply the simulation update patch on top of the before-credit threshold patch.
+2. Keep your EC2 stopped. Restart the FastAPI server.
+3. Use an existing, unexpired cost analysis containing EC2, or run `/cost-analysis`
+   once to obtain a fresh `analysis_id` (that billing step contacts AWS).
+4. Copy `examples/simulated-recommendation-request.json` into Swagger's request
+   body. Replace its analysis ID and account/region/resource identifiers as needed.
+5. Execute `/recommendations`. This simulation reads local configuration and the
+   saved analysis, but constructs no AWS clients and makes no AWS calls.
+6. Retrieve its `recommendation_id` with the existing GET route. The simulation
+   label, assumptions and values are preserved in the saved report.
+
+The before-credit threshold must still be configured and reached. Below the
+threshold no simulated alternative is evaluated. The simulation never checks that
+the supplied resource exists; identifiers associate the demo with your request,
+not with a verified resource assessment.
+
+For the supplied sample (20-second tasks, 256 MiB, 10,000 tasks/month), the example
+assumes a **$10/month current baseline**, duration rate **$0.000020/GB-second** and
+request rate **$0.000001/request**. The calculated target is **$1.01/month** and
+hypothetical savings are **$8.99/month (89.9%)**. These are fixture assumptions,
+**not current AWS prices**, and the baseline is not extrapolated from your bill.
+All responses explicitly say **Simulated test — not a live AWS recommendation**.
+Free tier, credits, S3, transfer, logs, retries, concurrency and migration overheads
+are excluded from the example. No real migration recommendation is established.
+
+Answers are parsed deterministically, not by a model. Use the example's exact
+questions and units (`20 seconds`, `256 MiB`, request/response sizes in MB, CPU
+percentages, and an integer monthly count). Unknown answers remain missing;
+unknown/duplicate questions and invalid values return 422. Long tasks or high
+example costs can return `simulated_no_recommendation` instead of forcing savings.
+
+Q&A is supported **only for simulation**. `simulated: false` with `answers` now
+returns 422 explaining that live mode requires structured verified evidence.
+Do not mix simulated and live profiles. There is no new endpoint, external
+notification, AWS resource change or automatic deployment.
+
 ## Testing branch: before-credit threshold gate
 
 On `testing-cost_before_credits`, `POST /recommendations` checks the chosen service's

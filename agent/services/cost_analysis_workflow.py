@@ -15,6 +15,7 @@ from pathlib import Path
 from agent.services.cost_thresholds import load_cost_threshold_settings, saved_service_threshold
 from agent.services.high_cost_identifier import HighCostServiceIdentifier
 from agent.services.readonly_guard import ReadOnlySessionManager
+from agent.services.recommendation_simulation import simulation_profile, simulate
 
 
 class WorkflowError(Exception):
@@ -210,8 +211,11 @@ class CostAnalysisWorkflow:
         return result
 
     def _recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
+        profile = simulation_profile(workload_inputs)
         report = self.store.load(analysis_id, self._fingerprint(), self.now_fn().timestamp())
         if not report["services"]:
+            if profile is not None:
+                raise ValueError("Simulation needs a saved cost analysis containing EC2 service costs.")
             return {"analysis_id": analysis_id, "status": "no_cost_data", "candidates": [], "recommendation": None}
         if service is None:
             selected = report["highest_cost_services"][0]
@@ -223,7 +227,6 @@ class CostAnalysisWorkflow:
                  *(v["service"].casefold() for v in r["cost_explorer_services"])}), None)
             if selected is None:
                 raise ValueError("Service was not found in this saved cost analysis. Use a returned service or service_key.")
-        self.engine._scope(account_id, regions)
         header = {"analysis_id": analysis_id, "service": selected["service"], "service_key": selected["service_key"],
                   "period": report["period"], "selected_period_cost_usd": selected["cost_usd"],
                   "selected_period_cost_usd_exact": selected["cost_usd_exact"], "billing_scope": report["billing_scope"],
@@ -240,9 +243,28 @@ class CostAnalysisWorkflow:
             load_cost_threshold_settings(self.engine.config, self.catalog), selected,
             report.get("cost_breakdown_available") is True)
         header["threshold"] = threshold
+        if profile is not None:
+            if selected["service_key"] != "ec2":
+                raise ValueError("The offline demonstration currently supports EC2 only; live catalog support is unchanged.")
+            accounts = set(self.registry.entries)
+            if profile["account_id"] not in accounts or (account_id and account_id != profile["account_id"]):
+                raise ValueError("Simulated profile account must match the configured/requested account.")
+            if regions and profile["region"] not in regions:
+                raise ValueError("Simulated profile region must match the requested regions.")
+            if resource_id and profile["resource_id"] != resource_id:
+                raise ValueError("Simulated profile resource must match resource_id.")
+            if threshold["status"] == "threshold_reached":
+                result = simulate(profile)
+            else:
+                result = {"simulated": True, "mode": "simulation",
+                          "label": "Simulated test — not a live AWS recommendation",
+                          "aws_access_checked": False, "status": threshold["status"],
+                          "recommendation": None, "reason": threshold["reason"]}
+            return {**header, **result, "billing_context": "Saved actual service costs are context only; all workload compatibility and monthly cost estimates below are simulated. Resource existence was not checked."}
         if threshold["status"] != "threshold_reached":
             return {**header, "status": threshold["status"], "reason": threshold["reason"],
                     "candidates": [], "recommendation": None}
+        self.engine._scope(account_id, regions)
         if not selected["alternative_ids"]:
             return {**header, "status": "no_supported_alternative", "candidates": [], "recommendation": None,
                     "reason": "No approved source-service mapping exists in the current catalog."}
