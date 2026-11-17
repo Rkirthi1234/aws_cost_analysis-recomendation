@@ -133,6 +133,9 @@ alternative_decisions:
 #   * Notification de-duplication is in memory by default. Optionally keep it in one
 #     LOCAL file with dedupe.state_file (never AWS storage).
 #   * The amounts below are placeholders: set thresholds that suit your account.
+# Testing branch: recommendations compare selected-period costs BEFORE credits.
+# Set enabled: true to activate recommendation threshold checks.
+# ec2: 0.01 is a test limit; ec2: 1.00 requires $1 before credits.
 cost_thresholds:
   enabled: false
   currency: USD

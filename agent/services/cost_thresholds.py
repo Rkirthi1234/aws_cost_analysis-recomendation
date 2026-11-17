@@ -455,3 +455,54 @@ class CostThresholdDetector:
 
 def _error(code: str, message: str) -> Dict[str, Any]:
     return {"error": True, "code": code, "message": message}
+
+
+class BeforeCreditCostSource:
+    """Adapt verified billing breakdowns for the existing exact threshold detector.
+
+    Net totals are never silently substituted when a breakdown is unavailable.
+    """
+    def __init__(self, source):
+        self.source = source
+
+    def service_costs(self, start, end):
+        result = self.source.service_costs(start, end, include_credit_breakdown=True)
+        if result.get("error"):
+            return result
+        before, credits, net = (result.get(k) for k in ("costs_before_credits", "credits", "costs"))
+        try:
+            valid = (result.get("cost_breakdown_available") is True and not result.get("warnings")
+                     and all(isinstance(v, dict) for v in (before, credits, net))
+                     and before.keys() == credits.keys() == net.keys()
+                     and all(all(Decimal(str(values[k])).is_finite() for values in (before, credits, net))
+                             and Decimal(str(before[k])) + Decimal(str(credits[k])) == Decimal(str(net[k]))
+                             for k in net))
+        except (ArithmeticError, ValueError, TypeError):
+            valid = False
+        if not valid:
+            return _error("IncompleteCreditBreakdown", "Verified before-credit costs are required; rerun cost analysis.")
+        return {**result, "costs": before}
+
+
+def saved_service_threshold(settings, selected, breakdown_available):
+    """Pure threshold gate over a saved service total; performs no AWS calls."""
+    result = {"basis": "cost_before_credits", "comparison_rule": "cost >= threshold"}
+    if not settings.valid:
+        return {**result, "status": "invalid_configuration", "reason": "; ".join(settings.errors)}
+    if not settings.enabled:
+        return {**result, "status": "thresholds_disabled", "reason": "Enable cost_thresholds.enabled in the server configuration."}
+    limit = settings.thresholds.get(selected.get("service_key"))
+    if limit is None:
+        return {**result, "status": "threshold_not_configured", "reason": "Configure a cost threshold for this service."}
+    result.update(threshold_usd=float(limit), threshold_usd_exact=str(limit))
+    try:
+        cost = Decimal(selected["cost_before_credits_usd_exact"])
+        if not breakdown_available or not cost.is_finite():
+            raise ValueError("Missing verified breakdown")
+    except (KeyError, TypeError, ArithmeticError, ValueError):
+        return {**result, "status": "needs_information", "reason": "Rerun cost analysis to obtain verified before-credit costs."}
+    reached = cost >= limit
+    return {**result, "status": "threshold_reached" if reached else "below_threshold",
+            "cost_before_credits_usd": float(cost), "cost_before_credits_usd_exact": str(cost),
+            "reason": "Before-credit service cost reached the configured threshold." if reached else
+                      "Before-credit service cost is below the configured threshold; alternatives were not evaluated."}

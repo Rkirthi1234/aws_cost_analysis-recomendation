@@ -1,11 +1,56 @@
 # Alternative service recommendations
 
 The existing Strands agent now has a complete **on-demand, read-only** path:
-date-based cost ranking (or optional threshold) → resource inventory and metrics → typed catalog rules → equivalent
+date-based cost ranking → before-credit threshold check → resource inventory and metrics → typed catalog rules → equivalent
 workload cost comparison → recommendation report. The command-line runner uses the
 same service. There is no migration, AWS write, schedule, email or SNS delivery.
 The report itself is the on-demand notification. Live AWS validation remains a
 separate deployment check; offline tests use fake clients only.
+
+## Testing branch: before-credit threshold gate
+
+On `testing-cost_before_credits`, `POST /recommendations` checks the chosen service's
+saved, exact before-credit cost against `cost_thresholds.services` before collecting
+fresh workload evidence. `cost >= threshold` counts as reached. No billing request
+is repeated during this check. The period is the saved analysis period, not a
+monthly forecast. Credits and net cost remain visible separately.
+
+Enable these settings in your existing **local** `agent/config.yaml` (merge with
+its existing sections; keep your account/profile settings):
+
+```yaml
+alternatives:
+  enabled: true
+cost_thresholds:
+  enabled: true
+  currency: USD
+  services:
+    ec2: 0.01
+    s3: 0.01
+```
+
+For your observed EC2 cost of $0.072418884 before credits, $0.01 crosses and $1.00
+does not. You do not need to incur additional AWS charges for this test.
+
+1. Restart FastAPI after editing the config.
+2. Run `POST /cost-analysis` with the required dates.
+3. Run `POST /recommendations` with the returned `analysis_id` and `service: "ec2"`.
+4. See `threshold.status`: `below_threshold` skips evaluation; `threshold_reached`
+   runs the existing compatibility and pricing checks. A reached threshold can
+   still return `status: "needs_information"`; spending alone proves no alternative.
+5. Retrieve the saved result with `GET /recommendations/{recommendation_id}`.
+   This returns the original threshold decision, even after configuration changes.
+
+Disabled, invalid or missing service thresholds block evaluation and report what
+to configure. Old snapshots without verified before-credit data require a new
+cost analysis. No candidate data is invented. No new endpoints, scheduled checks,
+email or SNS alerts are added. The API response is the on-demand alert.
+
+The CLI threshold recommendation flow (`agent.recommend` without an alternative
+ID, and the hidden `/threshold-recommendations` route) also uses verified
+before-credit costs. The separate legacy threshold-only agent tool retains its
+existing net-cost semantics; direct `/alternatives/evaluate` remains an explicit
+individual-candidate diagnostic that bypasses the spending gate.
 
 ## Test through FastAPI (browser interface)
 

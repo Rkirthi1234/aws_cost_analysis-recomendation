@@ -6,7 +6,7 @@ from agent.services.alternative_decision_settings import blocked_decision, load_
 from agent.services.alternative_pricing import AWSPriceList, AlternativeCostComparison
 from agent.services.alternatives_catalog import AlternativesCatalog
 from agent.services.compatibility_evaluator import CompatibilityEvaluator
-from agent.services.cost_thresholds import CostThresholdDetector, load_cost_threshold_settings
+from agent.services.cost_thresholds import BeforeCreditCostSource, CostThresholdDetector, load_cost_threshold_settings
 from agent.services.high_cost_identifier import HighCostServiceIdentifier
 from agent.services.recommendation_evidence import RecommendationEvidence
 from agent.services.readonly_guard import ReadOnlySessionManager
@@ -162,11 +162,12 @@ class RecommendationService:
         if threshold_settings.valid and threshold_settings.enabled and source is None:
             # Screen every thresholded service rather than only the default top-five high-cost list.
             source = HighCostServiceIdentifier(ReadOnlySessionManager(self.sm), self.registry, self.catalog)
-        alerts = CostThresholdDetector(threshold_settings, self.catalog, source).detect(
+        alerts = CostThresholdDetector(threshold_settings, self.catalog, BeforeCreditCostSource(source) if source else None).detect(
             start_date, end_date, today=self.now_fn().date())
         if alerts.get("error") or alerts.get("status") != "evaluated":
             return {"status": alerts.get("status", "failed"), "thresholds": alerts, "alternatives": [],
                     "notification_sent": False, "aws_resources_changed": False}
+        alerts["cost_basis"] = "cost_before_credits"
         crossed = set(alerts.get("crossed_service_keys", []))
         entries = [e for e in self.catalog.approved_entries() if crossed.intersection(e.source_services)]
         results = []

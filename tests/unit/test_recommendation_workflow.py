@@ -335,8 +335,11 @@ class FakeCollector:
 
 
 class CostSource:
-    def service_costs(self, start, end):
-        return {"costs": {"Amazon Elastic Compute Cloud - Compute": Decimal("1")},
+    def service_costs(self, start, end, *, include_credit_breakdown=False):
+        return {"cost_breakdown_available": True,
+                "costs_before_credits": {"Amazon Elastic Compute Cloud - Compute": Decimal("1")},
+                "credits": {"Amazon Elastic Compute Cloud - Compute": Decimal("0")},
+                "costs": {"Amazon Elastic Compute Cloud - Compute": Decimal("1")},
                 "units": {"Amazon Elastic Compute Cloud - Compute": ["USD"]}, "metric": "AmortizedCost"}
 
 

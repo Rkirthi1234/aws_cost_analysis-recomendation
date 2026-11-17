@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from agent.services.cost_thresholds import load_cost_threshold_settings, saved_service_threshold
 from agent.services.high_cost_identifier import HighCostServiceIdentifier
 from agent.services.readonly_guard import ReadOnlySessionManager
 
@@ -235,6 +236,13 @@ class CostAnalysisWorkflow:
                           selected_period_cost_before_credits_usd=selected["cost_before_credits_usd"],
                           selected_period_credits_applied_usd=selected["credits_applied_usd"],
                           selected_period_net_cost_usd=selected["net_cost_usd"])
+        threshold = saved_service_threshold(
+            load_cost_threshold_settings(self.engine.config, self.catalog), selected,
+            report.get("cost_breakdown_available") is True)
+        header["threshold"] = threshold
+        if threshold["status"] != "threshold_reached":
+            return {**header, "status": threshold["status"], "reason": threshold["reason"],
+                    "candidates": [], "recommendation": None}
         if not selected["alternative_ids"]:
             return {**header, "status": "no_supported_alternative", "candidates": [], "recommendation": None,
                     "reason": "No approved source-service mapping exists in the current catalog."}

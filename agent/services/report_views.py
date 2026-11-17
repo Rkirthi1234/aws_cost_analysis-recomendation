@@ -60,6 +60,8 @@ def recommendation_view(report, include_details=False):
         result.update({k: report[k] for k in ("ranking_basis", "selected_period_cost_before_credits_usd",
                                              "selected_period_credits_applied_usd", "selected_period_net_cost_usd")})
     result.update(status=status, currency="USD", recommendation=None, aws_resources_changed=False)
+    if "threshold" in report:
+        result["threshold"] = report["threshold"]
     candidates = [c for c in report.get("candidates", []) if c["status"] != "no_resources_found"
                   or c.get("details", {}).get("errors") or c.get("details", {}).get("status") == "partial"]
     names, missing, limitations, assumptions, evaluated = [], [], [], [], []
@@ -99,10 +101,18 @@ def recommendation_view(report, include_details=False):
         else:
             result["recommendations"] = preferred
         result.update(reason="Validated alternatives offer qualifying estimated savings.", next_action="Review the proposed migration for each assessed workload.")
+    elif status in ("below_threshold", "thresholds_disabled", "threshold_not_configured", "invalid_configuration"):
+        result.update(reason=report.get("reason"), next_action=(
+            "Run cost analysis again later and request a new recommendation." if status == "below_threshold" else
+            "Update the server cost_thresholds configuration, then request a new recommendation."))
     elif status == "needs_information":
         result.update(reason="Workload compatibility or pricing evidence is incomplete.",
                       required_information=list(dict.fromkeys(missing)),
                       next_action="Provide the missing workload measurements or assessments, then evaluate again.")
+        if report.get("threshold", {}).get("status") == "threshold_reached":
+            result["reason"] = "Threshold reached; workload compatibility or pricing information is still needed."
+        elif report.get("threshold", {}).get("status") == "needs_information":
+            result.update(reason=report["threshold"]["reason"], next_action="Run cost analysis again, then use the new analysis_id.")
         if not missing and limitations:
             result.update(reason="AWS evidence collection is incomplete.", next_action="Resolve the reported access or collection errors, then evaluate again.")
     elif status == "no_supported_alternative":

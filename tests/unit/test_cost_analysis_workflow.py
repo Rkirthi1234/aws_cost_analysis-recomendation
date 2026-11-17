@@ -34,6 +34,7 @@ def engine():
     obj.catalog = CATALOG
     obj.registry = AccountRegistry([{"account_id": "111111111111", "account_type": "payer", "use_current_credentials": True}], "us-east-1")
     obj.config.get.return_value = True
+    obj.config.config = {"cost_thresholds": {"enabled": True, "services": {"ec2": 0.01, "s3": 0.01, "rds": 0.01}}}
     obj.evaluate.return_value = {"reports": [], "errors": [], "warnings": [], "status": "evaluated"}
     return obj
 
