@@ -7,6 +7,218 @@ same service. There is no migration, AWS write, schedule, email or SNS delivery.
 The report itself is the on-demand notification. Live AWS validation remains a
 separate deployment check; offline tests use fake clients only.
 
+## AWS-first discovery and reusable workload answers
+
+No new endpoints are needed. After cost analysis, the first request can be:
+
+```json
+{
+  "analysis_id": "PASTE_CURRENT_ANALYSIS_ID",
+  "service": "Amazon EC2",
+  "regions": ["us-east-1"]
+}
+```
+
+Available AWS inventory, configuration, metrics and target-service presence are
+collected by the existing read-only collectors. If source resources are found but
+there is not enough workload context, the result is `candidates_for_assessment`.
+Its cards show catalog alternatives, automatic facts, scope and **only missing
+owner questions**, with types and answer paths. This is initial discovery, not a
+claim of compatibility, cost advantage or suitability. Failed collection, known
+incompatibility, already-used targets and known no-cost-advantage outcomes are not
+silently relabelled as valid recommendations. No source inventory means no
+invented candidate resource. Raw measurement/collection gaps remain in details.
+
+The main automatic sources remain Cost Explorer, service inventory/configuration,
+existing CloudWatch metrics and AWS Price List when pricing prerequisites pass.
+This update does not introduce exhaustive AWS-service searches, arbitrary S3 scans,
+application-log collection, memory-agent installation or target deployment.
+
+### Small owner-answer request
+
+Use the resource ID returned by discovery and submit only what you know:
+
+```json
+{
+  "analysis_id": "PASTE_CURRENT_ANALYSIS_ID",
+  "service": "Amazon EC2",
+  "regions": ["us-east-1"],
+  "resource_id": "i-08228576b5fffc52a",
+  "answers": {
+    "trigger": "manual",
+    "runs_per_month": {"min": 1, "max": 2},
+    "purpose": "Count words in text files stored in S3"
+  }
+}
+```
+
+This owner-stated discrete-job plan can support investigating Lambda. It does
+not fabricate a benchmark, event limit, target sizing or savings. An existing
+measurement report is reused when available; an unmeasured job is labelled as
+such. Evidence-based provisional suggestions still differ from fully validated
+recommendations. When comparable costs pass existing checks, the current engine
+selects the lowest validated target estimate for each workload; it never ranks
+unpriced catalog candidates as cheapest.
+
+Account and region are inferred only for an unambiguous configured/requested
+scope. Narrow `account_id`/`regions` when multiple scopes are possible. Resource ID
+is required unless a single saved/supplied resource identifies the target. This
+prevents applying one owner's answer to unrelated resources. Canonical question
+fields can also be supplied, e.g. `"workload.containerizable": true`. Scalar
+application fields such as event_driven/lambda_invocation_type are supported.
+Unknown answers may be omitted or null for supported nullable facts. Measurement,
+pricing and collected-resource fields cannot be guessed through the simple-answer
+interface. `requirements_assessed` is an explicit boolean confirmation, never a
+default or inferred from free text. Existing advanced workload_inputs still work.
+
+### Persistence and freshness
+
+Supported answers, assessments and externally supplied reports are stored locally
+in a bounded workload_profiles table alongside saved reports, after AWS inventory
+has found the matching resource. Credentials and unsupported fields are not saved;
+the existing redactor runs before persistence. Scoping includes configuration
+fingerprint, canonical service, account, region and resource. TTL/size bounds reuse
+the existing report-store settings (normally 24 hours and 1024 profiles). Cache
+reads do not refresh retention; fresh owner updates can replace matching facts.
+Every external measurement and prior evidence observation timestamp is retained.
+Fresh submission timestamps describe new owner statements, not new measurements.
+
+Later POSTs can omit workload_inputs/answers and reuse saved profiles while
+refreshing the AWS inspection. The response's workload_profile shows reused and
+submitted counts and retention_seconds. Fresh explicit answers override prior
+answers, including a canonical null clearing a formerly known fact. Updating a
+section does not re-date untouched compatibility evidence. Below-threshold calls
+still skip inspection and do not save new answers. Saved GET reports remain
+immutable snapshots and never run AWS collectors.
+
+For an upgrade, recent same-scope saved recommendation snapshots can supply their
+owner context and local measurement summaries. Recovery requires the original
+context/report dates to remain within TTL; no derived approvals, prices or
+simulation data are reconstructed. If no reusable facts exist, discovery asks only
+what remains missing instead of pretending earlier external inputs were known.
+
+Use examples/aws-first-recommendation-request.json and
+examples/simple-workload-answers.json for the two stages. Keep EC2 stopped. Neither
+stage changes AWS resources or creates Lambda. Savings remain unset until their
+existing evidence and pricing prerequisites pass.
+
+## Provisional suggestions from incomplete live evidence
+
+`POST /recommendations` now distinguishes these outcomes:
+
+- `recommended`: existing compatibility and qualifying cost/savings checks passed.
+  `recommendation` (or multiple recommendations) retains its validated meaning.
+- `provisional_suggestion`: positive workload facts support investigating at least
+  one catalog alternative, but compatibility or pricing is incomplete. A single
+  candidate appears in `suggestion`; multiple candidates appear in `suggestions`
+  without claiming which is cheapest. `recommendation` remains null.
+- `needs_information`: no supported provisional inference can be made yet.
+  A catalog mapping alone does not justify a provisional or validated recommendation; it may identify a clearly labelled candidate for assessment.
+
+Each provisional suggestion is labelled as a potential alternative, states the
+actual supporting facts, and has null cost/savings fields. Questions are scoped
+to that candidate, with evidence field names, types, units and allowed values.
+Missing collected/planned/derived measurements are evidence_gaps, not requests
+for users to guess CPU or memory. Requirements and pricing gaps stay explicit.
+No existing compatibility or savings gate is relaxed and no additional AWS calls
+or resource changes are introduced by this explanation layer.
+
+For the real 1 MB word-count example, manual execution, the owner-stated 1–2
+monthly-run plan and the actual scoped local test support investigating Lambda.
+They do not establish complete-runtime performance or lower costs. Container
+compatibility is not assumed, so Fargate is not automatically suggested from the
+same facts. The explanation is deterministic and evidence-based, not a model
+inventing a service, price or confidence score.
+
+Existing live evidence can also support provisional container/database/network
+candidates, and any catalog candidate that passed compatibility but lacks pricing
+can be shown as provisional. Already-used, incompatible and no-cost-advantage
+outcomes are not promoted; configuration errors, failed/partial collection and
+expired-attestation reasons block this provisional path. Scope is preserved for
+each resource/subject and suggestions across different workloads are not merged
+into one supposed best choice.
+
+Run a **new POST** with the same live request after updating/restarting FastAPI.
+Saved GET reports remain immutable: older recommendation IDs will still show
+their original results. New provisional reports retain their labels and gaps
+when retrieved with GET. No new endpoint or simulation data is needed.
+
+## Live workload connections (testing-cost_before_credits)
+
+This branch has no simulation engine, $10 baseline or fixture price rates. The
+runtime pricing service retrieves exact AWS Price List products, with SKU, rate,
+effective date and retrieval timestamp. Defaults such as a 730-hour comparison
+month, cache TTL, coverage criteria and AWS limits are settings/rules, not evidence
+that this resource runs all month. Catalog support remains all five alternatives.
+
+| Connection | Current implementation | Remaining input/evidence |
+| --- | --- | --- |
+| Billing and threshold | Cost Explorer before-credit snapshot and exact configured threshold | Refresh the saved analysis when expired |
+| Inventory/target usage | Read-only AWS inventory in explicitly inspected accounts/regions | Permissions and complete coverage |
+| CPU/instance memory | Existing CloudWatch/inventory collection | Representative coverage; memory utilization requires an existing metric |
+| Application facts | New typed `application` fields converted to scoped dated attestations | Actual owner answers; unknowns stay unknown |
+| Actual word-count report | New inline `measurement_report`, shown in POST/GET results | This local-only report is supporting context, not a complete benchmark |
+| Baseline cost | Resource-attributed billing, or an explicitly assessed monthly projection | No automatic attribution of EC2 Compute + EC2 Other service totals |
+| Alternative costs | AWS Price List query and equivalent-workload arithmetic | Assessed target sizing/duration, workload count and all dependent costs |
+| Saved results | Existing POST/GET routes | No AWS changes or alternative deployment needed |
+
+### Submit your actual test data
+
+Restart FastAPI, then use `examples/live-word-count-request.json` with a current
+analysis ID. It contains the actual reported 1 MB/186,813-word test measurements,
+17.49 ms local processing, 24.73 MiB Python process peak RSS, and the owner-stated
+manual 1–2 runs/month plan. Unknown compatibility facts are null. This is a
+partial real-data request: **expect needs_information**, not guaranteed savings.
+No role, instance or Lambda function is created by the recommendation API.
+
+`application` accepts source/observed_at plus typed event_driven,
+lambda_invocation_type, max_event_duration_seconds, max_request_payload_mb,
+max_response_payload_mb and containerizable. Non-null values become evidence
+records with the profile's account/region/resource. It also accepts contextual
+trigger (manual/event/schedule/continuous), input_file_bytes, monthly_runs_min,
+monthly_runs_max and requirements. Context does not silently approve requirements,
+choose a workload count, or set workload_assessment to true. Do not submit the
+same fact both in application and evidence. Free-text answers, simulated inputs
+and unsupported flat fields now produce an explicit error instead of being ignored.
+Existing structured evidence/pricing profiles continue to work.
+
+The uploaded S3 JSON is **not automatically fetched**: paste its report into
+measurement_report. The analyser does not need additional S3 read permissions for
+this input path. The file's 1 MB size is not the Lambda invocation payload size;
+a proposed invocation might instead carry a small S3 bucket/key reference. Manual
+execution alone does not establish synchronous/asynchronous target invocation.
+A single local processing measurement does not establish a maximum event duration,
+instance-wide peak memory, representative coverage, or target billed duration.
+No conversion is made from the Python RSS into instance memory utilization.
+
+### Explicit monthly baseline for occasional workloads
+
+Existing `pricing.current_cost` accepts `cost_basis`:
+
+- `observed_period_normalized` (legacy default): resource-attributed observed cost
+  is normalized by the observed calendar period and configured hours/month. Use
+  only when that period has the same intended workload duty cycle; a short test
+  session must not be presented as continuous monthly usage.
+- `monthly_projection`: provide monthly_amount_usd and schedule_assessed: true,
+  with dated scoped provenance in the same record. The amount must come from a
+  resource-specific calculation/reconciled report that includes the assessed
+  startup/run schedule, retained storage and other dependent/commitment costs.
+  This value is **not defaulted or filled by the application**. Output labels it
+  as a user-supplied projection, not an observed monthly bill.
+
+Current public target prices are fetched only when compatibility and the existing
+pricing assessments pass. No failed query is replaced with sample rates. A Lambda
+benchmark/deployment is not automatically required by this update, but the existing
+performance-equivalence assessment still needs evidence; local EC2 timings do not
+establish it. Positive savings are based on exact Decimal values and exact_costs
+are preserved in concise recommended results to avoid hiding sub-cent amounts.
+
+Still needed for this test: representative full-runtime/maximum-task and memory
+coverage, requirements assessment, an explicit target invocation/payload design,
+assessed target duration/memory/architecture, a chosen monthly count or evaluated
+range, resource monthly baseline, and dependent-cost/commitment assessments.
+These gaps are real; the API will not fabricate them from the service bill.
+
 ## Testing branch: before-credit threshold gate
 
 On `testing-cost_before_credits`, `POST /recommendations` checks the chosen service's
@@ -538,3 +750,21 @@ AWS reference sources used by the implementation:
 - [RDS engine version API](https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DBEngineVersion.html)
 - [Fargate pricing and billing duration](https://aws.amazon.com/fargate/pricing/)
 - [Gateway endpoint pricing](https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html)
+
+## Concise provisional report
+
+The default provisional response now shows the potential service, a short factual
+reason, `savings_status: not_calculated`, null estimated savings, and grouped
+`pending_checks`. IDs, the billing period, observed before-credit/credit/net costs,
+resource scope and a compact threshold result remain visible. It does not repeat
+raw measurement reports, technical field paths, every question, multiple null
+cost fields, detailed limitations or repeated explanations. The validated-only
+`recommendation` field is omitted from this provisional summary; `suggestion` (or
+`suggestions` for multiple resources/candidates) is explicitly provisional.
+
+Use `include_details=true` on the existing POST or saved GET route to see the
+complete report under `details`: candidate-specific questions and input paths,
+evidence gaps, supporting facts, exact threshold data and original measurements.
+This is a presentation change; no measurements are upgraded, cost calculations
+invented, compatibility gates relaxed or AWS operations added. Existing validated,
+below-threshold, error and no-recommendation views keep their previous contracts.

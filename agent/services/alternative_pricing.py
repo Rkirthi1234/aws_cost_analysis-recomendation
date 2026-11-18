@@ -163,17 +163,28 @@ class AlternativeCostComparison:
                 raise PricingUnavailable("Only USD cost comparison is supported.")
             hours = decimal(self.settings.value_of("pricing.hours_per_month"))
             baseline, current = profile.get("current_cost", {}), Decimal(0)
+            baseline_description = "Eligible observed NAT data-processing costs only."
             if not entry.id.startswith("nat-"):
                 error = validate_record(baseline, scope, self.settings, self.now_fn())
                 if error:
                     raise PricingUnavailable("Current resource-attributed cost: " + error)
                 if baseline.get("attribution") != "resource" or baseline.get("currency") != "USD":
                     raise PricingUnavailable("Current cost must be USD, attributed to this resource (CUR or a reconciled billing report), not a service total.")
-                start, end = timestamp(baseline.get("period_start")), timestamp(baseline.get("period_end_exclusive"))
-                if start is None or end is None or end <= start or end > self.now_fn():
-                    raise PricingUnavailable("Current cost needs a completed measurement period with timezone-aware dates.")
-                observed_hours = Decimal(str((end - start).total_seconds())) / 3600
-                current = decimal(baseline.get("amount_usd")) * hours / observed_hours
+                basis = baseline.get("cost_basis", "observed_period_normalized")
+                if basis == "monthly_projection":
+                    if baseline.get("schedule_assessed") is not True:
+                        raise PricingUnavailable("A projected monthly resource baseline requires an assessed run schedule and dependent/retained costs.")
+                    current = decimal(baseline.get("monthly_amount_usd"))
+                    baseline_description = "User-supplied resource monthly projection with an explicitly assessed run schedule; not an observed monthly bill."
+                elif basis == "observed_period_normalized":
+                    start, end = timestamp(baseline.get("period_start")), timestamp(baseline.get("period_end_exclusive"))
+                    if start is None or end is None or end <= start or end > self.now_fn():
+                        raise PricingUnavailable("Current cost needs a completed measurement period with timezone-aware dates.")
+                    observed_hours = Decimal(str((end - start).total_seconds())) / 3600
+                    current = decimal(baseline.get("amount_usd")) * hours / observed_hours
+                    baseline_description = f"Observed resource cost scaled to {hours} hours/month; valid only for the same duty cycle, not automatically continuous operation."
+                else:
+                    raise PricingUnavailable("current_cost.cost_basis must be observed_period_normalized or monthly_projection.")
             # Costs that continue after migration (for example RI/SP commitments) stay in target spend.
             retained = decimal(profile.get("retained_monthly_cost_usd"))
             target_lines = self._plan(entry, decision, resource, profile, hours)
@@ -207,7 +218,7 @@ class AlternativeCostComparison:
                     "exact": {"current": str(current), "alternative": str(total), "savings": str(savings)},
                     "current_cost_evidence": baseline, "target_components": lines,
                     "scope": "eligible NAT data-processing only" if entry.id.startswith("nat-") else "resource workload and assessed dependent costs",
-                    "assumptions": [f"Normalize to {hours} hours per month using the stated observed workload.",
+                    "assumptions": [baseline_description,
                                     "Estimates are not a bill or a migration guarantee.",
                                     "Target uses public on-demand USD rates, excludes tax/free tier/private discounts.",
                                     "Benchmark equivalence and all dependent costs are explicitly assessed by the workload owner.",

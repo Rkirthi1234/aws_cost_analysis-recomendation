@@ -8,6 +8,7 @@ from agent.services.alternatives_catalog import AlternativesCatalog
 from agent.services.compatibility_evaluator import CompatibilityEvaluator
 from agent.services.cost_thresholds import BeforeCreditCostSource, CostThresholdDetector, load_cost_threshold_settings
 from agent.services.high_cost_identifier import HighCostServiceIdentifier
+from agent.services.live_workload_inputs import normalize_live_profiles
 from agent.services.recommendation_evidence import RecommendationEvidence
 from agent.services.readonly_guard import ReadOnlySessionManager
 from agent.services.usage_evidence import UsageEvidenceCollector
@@ -44,7 +45,7 @@ class RecommendationService:
         if entry is None:
             raise ValueError("Unknown or unapproved alternative_id.")
         scope = self._scope(account_id, regions)
-        profiles = [] if workload_inputs is None else workload_inputs
+        profiles, input_summary = normalize_live_profiles(workload_inputs, self.now_fn())
         if not isinstance(profiles, list) or len(profiles) > 200:
             raise ValueError("workload_inputs must be a list of at most 200 scoped resource profiles.")
         indexed = {}
@@ -124,8 +125,9 @@ class RecommendationService:
         if limited:
             warnings.append("Report details are capped at 25; remaining resources were not evaluated. Request a resource_id for each remaining resource.")
         return {"alternative_id": entry.id, "status": "partial" if errors or limited else "evaluated",
-                "scope": scope, "target_usage_scope": "ECS Fargate / target inventory in the listed regions only; no claim about uninspected regions",
+                "scope": scope, "target_usage_scope": f"{entry.alternative_name} inventory in the listed regions only; no claim about uninspected regions",
                 "resources_seen": scanned, "reports": reports, "reports_shown": len(reports),
+                "input_summary": input_summary,
                 "errors": errors, "warnings": list(dict.fromkeys(warnings)),
                 "recommendations": sum(r["status"] == "recommended" for r in reports),
                 "settings": self.settings.as_dict(), "aws_resources_changed": False}

@@ -1,7 +1,7 @@
 """Date-based cost ranking and saved-analysis handoff to the existing evaluator.
 
 Cost Explorer reads remain read-only. Only analysis snapshots are saved locally;
-credentials and workload inputs are never stored in the analysis database.
+credentials are never stored. Supported scoped workload answers are saved separately with bounded retention.
 """
 import hashlib
 import json
@@ -12,8 +12,12 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from agent.services.candidate_discovery import assessment_candidates
+from agent.services.workload_profiles import WorkloadProfiles, merge_profiles, profile_key, simple_answers
 from agent.services.cost_thresholds import load_cost_threshold_settings, saved_service_threshold
 from agent.services.high_cost_identifier import HighCostServiceIdentifier
+from agent.services.live_workload_inputs import normalize_live_profiles
+from agent.services.provisional_suggestions import build_provisional_suggestions
 from agent.services.readonly_guard import ReadOnlySessionManager
 
 
@@ -199,8 +203,8 @@ class CostAnalysisWorkflow:
         return {**{k: v for k, v in report.items() if k != "services"},
                 "services_shown": len(report["highest_cost_services"])}
 
-    def recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
-        result = self._recommend(analysis_id, service, account_id, regions, workload_inputs, resource_id)
+    def recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None, answers=None):
+        result = self._recommend(analysis_id, service, account_id, regions, workload_inputs, resource_id, answers)
         result.update(recommendation_id="recommendation-" + uuid.uuid4().hex, created_at=self.now_fn().isoformat())
         # Save evaluated evidence, never the raw request/credentials. Use the same
         # redaction applied to API/tool responses before writing the snapshot.
@@ -209,7 +213,9 @@ class CostAnalysisWorkflow:
         self.store.save_recommendation(result, self._fingerprint(), self.now_fn().timestamp())
         return result
 
-    def _recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None):
+    def _recommend(self, analysis_id, service=None, account_id=None, regions=None, workload_inputs=None, resource_id=None, answers=None):
+        # Validate live input even below threshold; unsupported fields must never be silently ignored.
+        normalize_live_profiles(workload_inputs, self.now_fn())
         report = self.store.load(analysis_id, self._fingerprint(), self.now_fn().timestamp())
         if not report["services"]:
             return {"analysis_id": analysis_id, "status": "no_cost_data", "candidates": [], "recommendation": None}
@@ -246,6 +252,34 @@ class CostAnalysisWorkflow:
         if not selected["alternative_ids"]:
             return {**header, "status": "no_supported_alternative", "candidates": [], "recommendation": None,
                     "reason": "No approved source-service mapping exists in the current catalog."}
+        scope = {aid: list(dict.fromkeys(regions or [entry.region])) for aid, entry in self.registry.entries.items()
+                 if account_id is None or aid == account_id}
+        profiles_store = WorkloadProfiles(self.store.path, self.store.ttl, self.store.max_entries)
+        saved = profiles_store.load(self._fingerprint(), selected["service_key"], scope, resource_id, self.now_fn().timestamp())
+        supplied = workload_inputs or []
+        for p in supplied:
+            if p["account_id"] not in scope or p["region"] not in scope[p["account_id"]] or (resource_id and p["resource_id"] != resource_id):
+                raise ValueError("Workload profile is outside the requested resource/account/region scope.")
+        keys = [profile_key(p) for p in supplied]
+        if len(set(keys)) != len(keys):
+            raise ValueError("Duplicate workload profiles are ambiguous.")
+        if answers is not None:
+            chosen = resource_id
+            if chosen is None:
+                known = {p["resource_id"] for p in supplied + saved}
+                if len(known) == 1:
+                    chosen = next(iter(known))
+            if chosen is None or len(scope) != 1 or len(next(iter(scope.values()))) != 1:
+                raise ValueError("For simple answers, select resource_id and a single account/region from the initial candidates; use account_id/regions to narrow ambiguous scope.")
+            aid = next(iter(scope))
+            answer_profile = simple_answers(answers, {"account_id": aid, "region": scope[aid][0], "resource_id": chosen},
+                                            self.catalog, selected["service_key"], self.now_fn())
+            supplied = merge_profiles(supplied, [answer_profile])
+        merged = merge_profiles(saved, supplied)
+        normalize_live_profiles(merged, self.now_fn())
+        workload_inputs = merged if merged else workload_inputs
+        header["workload_profile"] = {"reused": len(saved), "submitted": len(supplied),
+                                       "retention_seconds": self.store.ttl}
         candidates, qualifying = [], []
         for eid in selected["alternative_ids"]:
             outcome = self.engine.evaluate(eid, account_id, regions, workload_inputs, resource_id)
@@ -270,7 +304,7 @@ class CostAnalysisWorkflow:
                     qualifying.append({"alternative_id": eid, "alternative": entry.alternative_name,
                         **{k: d.get(k) for k in ("account_id", "region", "resource_id", "subject")},
                         **{k: cost[k] for k in ("current_monthly_cost_usd", "alternative_monthly_cost_usd", "monthly_savings_usd", "savings_pct")},
-                        "reason": rr["explanation"], "_exact": cost["exact"]["alternative"]})
+                        "reason": rr["explanation"], "exact_costs": cost["exact"], "_exact": cost["exact"]["alternative"]})
         # Choose independently for each resource/subject, not across unrelated workloads.
         best = {}
         for item in qualifying:
@@ -278,7 +312,17 @@ class CostAnalysisWorkflow:
             if key not in best or Decimal(item["_exact"]) < Decimal(best[key]["_exact"]):
                 best[key] = item
         preferred = [{k: v for k, v in item.items() if k != "_exact"} for item in best.values()]
+        found = {tuple(rr.get("decision", {}).get(k) for k in ("account_id", "region", "resource_id"))
+                 for candidate in candidates for rr in candidate.get("details", {}).get("reports", [])}
+        changed = {profile_key(p) for p in supplied}
+        for profile in merged:
+            if profile_key(profile) in changed and profile_key(profile) in found:
+                profiles_store.save(self._fingerprint(), selected["service_key"], profile, self.now_fn().timestamp())
         statuses = {c["status"] for c in candidates}
-        status = "recommended" if preferred else "needs_information" if "needs_information" in statuses else "no_recommendation"
-        return {**header, "status": status, "candidates": candidates, "preferred_recommendations": preferred,
+        discovered = assessment_candidates(candidates, self.catalog)
+        suggestions = build_provisional_suggestions(candidates, self.catalog) if not preferred else []
+        status = ("recommended" if preferred else "provisional_suggestion" if suggestions else
+                  "candidates_for_assessment" if discovered else
+                  "needs_information" if "needs_information" in statuses else "no_recommendation")
+        return {**header, "status": status, "candidates": candidates, "provisional_suggestions": suggestions, "assessment_candidates": discovered, "preferred_recommendations": preferred,
                 "recommendation": preferred[0] if len(preferred) == 1 else None}

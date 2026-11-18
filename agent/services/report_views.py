@@ -45,14 +45,77 @@ def _human_requirement(reason):
 
 
 def _priced(item):
-    return {**{k: item[k] for k in ("alternative", "account_id", "region", "resource_id", "subject") if item.get(k) is not None},
+    return {**{k: item[k] for k in ("alternative", "account_id", "region", "resource_id", "subject", "exact_costs") if item.get(k) is not None},
             "current_monthly_cost_usd": item["current_monthly_cost_usd"],
             "estimated_alternative_monthly_cost_usd": item["alternative_monthly_cost_usd"],
             "estimated_monthly_savings_usd": item["monthly_savings_usd"],
             "estimated_savings_percent": item["savings_pct"], "reason": item["reason"]}
 
 
+def _brief_suggestion(item):
+    """User-facing summary; the saved report retains every technical field."""
+    fields = {q.get("field", "") for q in item.get("questions", [])}
+    gaps = {g.get("field", "") for g in item.get("evidence_gaps", [])}
+    pending = []
+    if fields - {"workload.max_event_duration_seconds"}:
+        pending.append("Application behavior and invocation design")
+    if "workload.max_event_duration_seconds" in fields or any("memory" in k or "cpu" in k for k in gaps):
+        pending.append("Complete task measurements and resource sizing")
+    if "collection" in gaps:
+        pending.append("Application requirements assessment")
+    if "pricing" in gaps:
+        pending.append("Comparable monthly costs")
+    if gaps - {"collection", "pricing", "ec2.peak_memory_mib", "ec2.peak_vcpus_used"}:
+        pending.append("Additional evidence checks; see details")
+    result = {"service": item["service"],
+              "reason": next(iter(item.get("supporting_facts", [])), item.get("reason", "Available evidence supports investigating this alternative.")),
+              "validation": "provisional", "savings_status": "not_calculated",
+              "estimated_monthly_savings_usd": None, "pending_checks": pending}
+    for key in ("account_id", "region", "resource_id", "subject"):
+        if item.get(key) is not None:
+            result[key] = item[key]
+    return result
+
+
+def _provisional_view(report, include_details):
+    result = {k: report[k] for k in ("recommendation_id", "analysis_id", "created_at", "service", "period",
+              "selected_period_cost_before_credits_usd", "selected_period_credits_applied_usd", "selected_period_net_cost_usd") if k in report}
+    if "workload_profile" in report:
+        result["workload_profile"] = report["workload_profile"]
+    result.update(status="provisional_suggestion", currency="USD", aws_resources_changed=False,
+                  note="Potential alternative only; compatibility and cost savings are not fully verified.")
+    if "threshold" in report:
+        result["threshold"] = {k: report["threshold"][k] for k in ("status", "threshold_usd") if k in report["threshold"]}
+    suggestions = [_brief_suggestion(item) for item in report.get("provisional_suggestions", [])]
+    if len(suggestions) == 1:
+        result["suggestion"] = suggestions[0]
+    else:
+        result["suggestions"] = suggestions
+    result["next_action"] = "Review the pending checks before making a migration decision."
+    if include_details:
+        result["details"] = report
+    return result
+
+
+def _assessment_view(report, include_details):
+    result = {k: report[k] for k in ("recommendation_id", "analysis_id", "created_at", "service", "period", "workload_profile", "selected_period_cost_before_credits_usd", "selected_period_credits_applied_usd", "selected_period_net_cost_usd") if k in report}
+    result.update(status="candidates_for_assessment", currency="USD", aws_resources_changed=False,
+                  note="Candidates found from AWS inventory and catalog mappings; suitability and savings are not established.")
+    if "threshold" in report:
+        result["threshold"] = {k: report["threshold"][k] for k in ("status", "threshold_usd") if k in report["threshold"]}
+    result["candidates"] = [{k: c[k] for k in ("service", "account_id", "region", "resource_id", "subject", "validation", "automatic_facts", "questions") if k in c}
+                            for c in report.get("assessment_candidates", [])]
+    result["next_action"] = "Select a resource and submit only its missing owner answers in answers. Available measurements are collected automatically; unavailable measurements remain evidence gaps."
+    if include_details:
+        result["details"] = report
+    return result
+
+
 def recommendation_view(report, include_details=False):
+    if report["status"] == "candidates_for_assessment":
+        return _assessment_view(report, include_details)
+    if report["status"] == "provisional_suggestion":
+        return _provisional_view(report, include_details)
     status = report["status"]
     result = {k: report[k] for k in ("recommendation_id", "analysis_id", "created_at", "service", "period", "selected_period_cost_usd") if k in report}
     if "selected_period_cost_before_credits_usd" in report:
@@ -60,14 +123,21 @@ def recommendation_view(report, include_details=False):
         result.update({k: report[k] for k in ("ranking_basis", "selected_period_cost_before_credits_usd",
                                              "selected_period_credits_applied_usd", "selected_period_net_cost_usd")})
     result.update(status=status, currency="USD", recommendation=None, aws_resources_changed=False)
+    if "workload_profile" in report:
+        result["workload_profile"] = report["workload_profile"]
     if "threshold" in report:
         result["threshold"] = report["threshold"]
     candidates = [c for c in report.get("candidates", []) if c["status"] != "no_resources_found"
                   or c.get("details", {}).get("errors") or c.get("details", {}).get("status") == "partial"]
     names, missing, limitations, assumptions, evaluated = [], [], [], [], []
+    input_summaries = []
     for candidate in candidates:
         names.append(candidate["alternative"])
         details = candidate.get("details", {})
+        for summary in details.get("input_summary", []):
+            if summary not in input_summaries:
+                input_summaries.append(summary)
+                limitations.extend(summary.get("limitations", []))
         for err in details.get("errors", []):
             limitations.append(err.get("message", str(err)))
         limitations.extend(details.get("warnings", []))
@@ -126,6 +196,8 @@ def recommendation_view(report, include_details=False):
         else:
             result.update(reason="No validated lower-cost alternative was found for the inspected resources.",
                           next_action="Review the candidate outcomes before planning changes.")
+    if input_summaries:
+        result["workload_inputs_received"] = input_summaries
     if evaluated:
         result["alternative_outcomes"] = evaluated
     limitations = list(dict.fromkeys(limitations))

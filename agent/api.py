@@ -45,7 +45,7 @@ class WorkloadRequest(BaseModel):
     regions: list[Annotated[str, Field(min_length=1, max_length=64)]] | None = Field(
         default=None, min_length=1, max_length=10, description="Omit to use configured account regions.")
     workload_inputs: list[dict[str, Any]] = Field(default_factory=list, max_length=200,
-        description="Leave empty for the first test. Later supply verified workload facts using docs/recommendations.md.")
+        description="Live only: supply scoped application statements, a measurement_report, or verified evidence/pricing. See examples/live-word-count-request.json. Simulation and free-text answers are rejected.")
 
 
 class ThresholdRequest(WorkloadRequest):
@@ -82,6 +82,8 @@ class RecommendationRequest(WorkloadRequest):
     model_config = ConfigDict(extra="forbid", json_schema_extra={"example": {
         "analysis_id": "PASTE_ANALYSIS_ID_FROM_COST_ANALYSIS", "service": "Amazon EC2",
         "regions": ["us-east-1"], "workload_inputs": []}})
+    answers: dict[str, Any] | None = Field(default=None,
+        description="Optional simple owner answers for one resource, e.g. trigger, runs_per_month {min,max}, purpose or the candidate's typed answers field. Saved and reused; no measurements are guessed.")
     analysis_id: str = Field(min_length=1, max_length=128, description="Copy analysis_id from POST /cost-analysis.")
     service: str | None = Field(default=None, min_length=1, max_length=300,
         description="A returned service or service_key. Omit to select the highest-cost service.")
@@ -174,7 +176,7 @@ def saved_cost_analysis(analysis_id: str, saved: SavedReports, include_details: 
 
 @app.post("/recommendations", tags=["Main workflow"], summary="4. Create recommendations")
 def recommendations(request: RecommendationRequest, workflow: Workflow, include_details: DetailFlag = False):
-    """Evaluate and save alternatives using an analysis ID; return a recommendation ID."""
+    """Save validated recommendations or clearly labelled provisional suggestions from available live facts. Unverified savings are never claimed."""
     if not is_alternatives_enabled(workflow.engine.config):
         raise HTTPException(status_code=503, detail="Set alternatives.enabled: true in the local configuration.")
     return _respond(workflow.recommend, request, renderer=lambda r: recommendation_view(r, include_details))
